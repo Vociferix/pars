@@ -3,6 +3,9 @@ name = "pars"
 version = "0.1.0"
 edition = "2021"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 ascii = { version = "1.1", default-features = false, optional = true }
 icu_properties = { version = "1.5", optional = true }

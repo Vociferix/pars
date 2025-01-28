@@ -91,6 +91,7 @@ impl ByteSymbol for core::primitive::i8 {
     }
 }
 
+#[cfg(feature = "ascii")]
 impl ByteSymbol for crate::ascii::AsciiChar {
     fn parse_byte<I>(input: I) -> PResult<core::primitive::u8, I>
     where
@@ -150,6 +151,7 @@ where
     VerbatimParser(pattern, PhantomData)
 }
 
+#[cfg(feature = "ascii")]
 pub fn ascii_char<I: ByteInput>(input: I) -> PResult<crate::ascii::AsciiChar, I> {
     u8.try_map(|b| crate::ascii::AsciiChar::from_ascii(b).map_err(|_| ErrorKind::InvalidInput))
         .parse(input)

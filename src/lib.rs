@@ -168,8 +168,8 @@
 //! `pars` does not define a general purpose error for parsing failures. Instead, it
 //! provides the [`Error`] trait. Users can define their own parsing error types, and
 //! `pars` provides a basic error type for each of the modules
-//! [`bytes`](bytes::Error), [`ascii`](ascii::Error), and
-//! [`unicode`](unicode::Error).
+//! [`bytes`](./bytes/struct.Error.html), [`ascii`](./ascii/struct.Error.html), and
+//! [`unicode`](./unicode/struct.Error.html).
 //!
 //! A parsing error, aside from other error information it communicates, contains the
 //! input position at which the error occurred. The generic parsers and combinators
@@ -239,8 +239,8 @@
 //! can be converted to any type implementing [`Error`].
 //!
 //! When combining a user defined error with parsers that use a different error type,
-//! such as [`bytes::u8`], there are a few ways this can be dealt with. The simplest
-//! way is to use [`basic::into`] (or [`Parse::parse_into`]).
+//! such as [`bytes::u8`](./bytes/fn.u8.html), there are a few ways this can be dealt with.
+//! The simplest way is to use [`basic::into`] (or [`Parse::parse_into`]).
 //!
 //! ```
 //! # use pars::{bytes, Input, ErrorSeed, Error, Parse, PResult};
@@ -305,14 +305,14 @@
 //! * `alloc` - Enable usage of the [`alloc`] crate. This enables [`IntoInput`] impls
 //! for types such as [`&Vec<[T]>`](alloc::vec::Vec) and
 //! [`&String`](alloc::string::String). Enabled by default.
-//! * `bytes` - Enable the [`bytes`] module, which provides parsers and utilities for
-//! byte streams.
-//! * `unicode` - Enable the [`unicode`] module, which provides parsers and utilities
-//! for UTF-8, UTF-16, and UTF-32 streams.
-//! * `ascii` - Enable the [`ascii`] module, which provides parsers and utilities for
-//! ASCII character streams.
+//! * `bytes` - Enable the [`bytes`](./bytes) module, which provides parsers and utilities
+//! for byte streams.
+//! * `unicode` - Enable the [`unicode`](./unicode) module, which provides parsers and
+//! utilities for UTF-8, UTF-16, and UTF-32 streams.
+//! * `ascii` - Enable the [`ascii`](./ascii) module, which provides parsers and utilities
+//! for ASCII character streams.
 
-#[cfg(feature = "alloc")]
+#[cfg(any(doc, feature = "alloc"))]
 extern crate alloc;
 
 mod input;
