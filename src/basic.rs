@@ -393,6 +393,36 @@ where
     }
 }
 
+/// Creates a parser that transforms a parsing error.
+///
+/// The provided function, `map_err_fn`, is applied the parsing error of
+/// `parser` if its parsing fails. The value returned from `map_err_fn`
+/// becomes the parsing error of the new parser. Otherwise, if `parser`
+/// succeeds, its parsed result is the parsed result of the new parser.
+///
+/// This combinator is most useful for converting between error types.
+///
+/// See also [`Parse::map_err`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::{bytes, unicode, PResult};
+/// # use pars::basic::map_err;
+/// fn my_parser(input: &[u8]) -> PResult<u8, &[u8], unicode::Error<&[u8]>> {
+///     map_err(bytes::u8, |err: bytes::Error<&[u8]>| {
+///         match err.kind() {
+///             bytes::ErrorKind::NeedMoreInput => unicode::ErrorKind::NeedMoreInput,
+///             bytes::ErrorKind::ExpectedEof => unicode::ErrorKind::ExpectedEof,
+///             _ => unicode::ErrorKind::InvalidInput,
+///         }.into_error(*err.position())
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"hello") == Ok(Success(b'h', b"ello")));
+/// assert!(my_parser.parse(b"") == Err(Failure(
+///     unicode::ErrorKind::NeedMoreInput.into_error(b"".as_slice()), b"")));
+/// ```
 #[inline]
 pub const fn map_err<P, F, R, I>(
     parser: P,

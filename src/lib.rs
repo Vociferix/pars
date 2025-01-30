@@ -951,9 +951,33 @@ impl<T, I: Input> Success<T, I> {
     }
 }
 
+impl<T, I> From<Success<T, I>> for (T, I) {
+    fn from(Success(t, i): Success<T, I>) -> (T, I) {
+        (t, i)
+    }
+}
+
+impl<T, I> From<(T, I)> for Success<T, I> {
+    fn from((t, i): (T, I)) -> Self {
+        Self(t, i)
+    }
+}
+
 impl<T, U: From<T>, I: Input, E: Error<I>> From<Success<T, I>> for PResult<U, I, E> {
     fn from(Success(val, rem): Success<T, I>) -> Self {
         Ok(Success(U::from(val), rem))
+    }
+}
+
+impl<T, I> From<Failure<T, I>> for (T, I) {
+    fn from(Failure(t, i): Failure<T, I>) -> (T, I) {
+        (t, i)
+    }
+}
+
+impl<T, I> From<(T, I)> for Failure<T, I> {
+    fn from((t, i): (T, I)) -> Self {
+        Self(t, i)
     }
 }
 
