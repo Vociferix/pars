@@ -255,6 +255,27 @@ where
     }
 }
 
+/// Creates a parser whose parsed result is transformed.
+///
+/// The provided function, `map_fn`, is applied to the parsed result of
+/// `parser` if it parses successfully. The value returned from `map_fn`
+/// is the parsed result of the new parser.
+///
+/// If the the mapping operation could fail, use [`try_map`] instead.
+///
+/// See also [`Parse::map`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::{self, PResult};
+/// # use pars::basic::map;
+/// fn inv_byte(input: &[u8]) -> PResult<u8, &[u8]> {
+///     map(bytes::u8, |byte| !byte).parse(input)
+/// }
+///
+/// assert_eq!(inv_byte.parse(b"\x0f").unwrap().0, 0xf0);
+/// ```
 #[inline]
 pub const fn map<P, F, R, I>(parser: P, map_fn: F) -> impl Parse<I, Parsed = R, Error = P::Error>
 where
@@ -296,6 +317,38 @@ where
     }
 }
 
+/// Creates a parser whose parsed result is fallibly transformed.
+///
+/// The provided function, `map_fn`, is applied to the parsed result of
+/// `parser` if it parses successfully. `map_fn` is permitted to fail,
+/// which is signaled with an [`Err`] return value. In thise case the
+/// new parser fails, and the contained error is converted to an
+/// [`Error`] via [`ErrorSeed`]. If an [`Ok`] value is returned, the
+/// contained value becomes the parsed result of the new parser.
+///
+/// If the mapping function cannot fail, use [`map`] instead.
+///
+/// See also [`Parse::try_map`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::{self, PResult};
+/// # use pars::basic::try_map;
+/// # use pars::ErrorKind;
+/// fn inv_byte(input: &[u8]) -> PResult<u8, &[u8]> {
+///     try_map(bytes::u8, |byte| {
+///         if byte < 0x80 {
+///             Ok(!byte)
+///         } else {
+///             Err(ErrorKind::InvalidInput)
+///         }
+///     }).parse(input)
+/// }
+///
+/// assert_eq!(inv_byte.parse(b"\x0f").unwrap().0, 0xf0);
+/// assert!(inv_byte.parse(b"\xf0").is_err());
+/// ```
 #[inline]
 pub const fn try_map<P, F, R, S, I>(
     parser: P,
