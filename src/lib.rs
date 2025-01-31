@@ -294,9 +294,9 @@
 //! }
 //! ```
 //!
-//! When relying on a [`From`] implementation doesn't work, [`basic::map_err`],
-//! [`basic::map_res`], and [`basic::map_pres`] are also available to define error
-//! conversions separately for each instance.
+//! When relying on a [`From`] implementation doesn't work [`Parse::map_err`] and
+//! [`Parse::map_res`] are also available to define error conversions separately for each
+//! instance.
 //!
 //! # Features
 //! Note that there is no `std` feature, since `pars` never makes use of types that are
@@ -374,7 +374,7 @@ pub trait Error<I: Input>: Sized {
 /// generic [`ErrorSeed`] is [`ErrorKind`]. However, an [`ErrorSeed`] type can be
 /// anything as long as it can be combined with some [`Input`] to create an [`Error`].
 ///
-/// An [`ErrorSeed`] is generally used in fallible combinators (i.e. any `basic::try_*`
+/// An [`ErrorSeed`] is generally used in fallible combinators (i.e. any `Parse::try_*`
 /// combinator) to represent an error with the input stream abstracted away. For
 /// example:
 /// ```
@@ -501,15 +501,6 @@ pub trait Parse<I: Input>: Sized {
         E: Error<I>,
     {
         basic::map_res(self, map_res_fn)
-    }
-
-    #[inline]
-    fn map_pres<F, R, E>(self, map_pres_fn: F) -> impl Parse<I, Parsed = R, Error = E>
-    where
-        F: Fn(PResult<Self::Parsed, I, Self::Error>) -> PResult<R, I, E>,
-        E: Error<I>,
-    {
-        basic::map_pres(self, map_pres_fn)
     }
 
     #[inline]

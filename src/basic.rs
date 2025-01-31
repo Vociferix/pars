@@ -473,6 +473,41 @@ where
     }
 }
 
+/// Creates a parser whose result is transformed.
+///
+/// The provided function, `map_res_fn`, accepts a [`Result`] containing either the
+/// successfully parsed value of `parser` or the parsing error returned by `parser`.
+/// `map_res_fn` then returns a new [`Result`], which will contain either the new
+/// successful parsed value or a new parsing error.
+///
+/// Unlike [`map`] or [`map_err`], the mapping function may choose to convert an
+/// [`Ok`] into and [`Err`] or an [`Err`] into an [`Ok`].
+///
+/// See also [`Parse::map_res`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::map_res;
+/// # use pars::bytes::{self, PResult, Error, ErrorKind};
+/// fn my_parser(input: &[u8]) -> PResult<u8, &[u8]> {
+///     map_res(bytes::u8, |res| match res {
+///         Ok(byte) if byte >= 0x80 => {
+///             Err(ErrorKind::InvalidInput.into_error(b"".as_slice()))
+///         },
+///         Ok(byte) => Ok(byte),
+///         Err(err) if err.kind() == ErrorKind::NeedMoreInput => Ok(0),
+///         Err(err) => Err(err),
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"hello") == Ok(Success(b'h', b"ello")));
+/// assert_eq!(
+///     my_parser.parse(b"\xffhello").unwrap_err().0.kind(),
+///     ErrorKind::InvalidInput,
+/// );
+/// assert!(my_parser.parse(b"") == Ok(Success(b'\x00', b"")));
+/// ```
 #[inline]
 pub const fn map_res<P, F, R, E, I>(
     parser: P,
@@ -485,47 +520,6 @@ where
     E: Error<I>,
 {
     MapResParser(parser, map_res_fn, PhantomData)
-}
-
-#[derive(Debug, Clone)]
-struct MapPResParser<P, F, R, E, I>(P, F, PhantomData<fn() -> (R, E, I)>)
-where
-    P: Parse<I>,
-    I: Input,
-    F: Fn(PResult<P::Parsed, I, P::Error>) -> PResult<R, I, E>,
-    E: Error<I>;
-
-impl<P, F, R, E, I> Parse<I> for MapPResParser<P, F, R, E, I>
-where
-    P: Parse<I>,
-    I: Input,
-    F: Fn(PResult<P::Parsed, I, P::Error>) -> PResult<R, I, E>,
-    E: Error<I>,
-{
-    type Parsed = R;
-    type Error = E;
-
-    fn parse<N>(&self, input: N) -> PResult<R, I, E>
-    where
-        N: IntoInput<Input = I>,
-    {
-        let input = input.into_input();
-        (self.1)(self.0.parse(input))
-    }
-}
-
-#[inline]
-pub const fn map_pres<P, F, R, E, I>(
-    parser: P,
-    map_pres_fn: F,
-) -> impl Parse<I, Parsed = R, Error = E>
-where
-    P: Parse<I>,
-    I: Input,
-    F: Fn(PResult<P::Parsed, I, P::Error>) -> PResult<R, I, E>,
-    E: Error<I>,
-{
-    MapPResParser(parser, map_pres_fn, PhantomData)
 }
 
 #[derive(Debug, Clone)]
