@@ -546,6 +546,25 @@ impl<I: Input, E: Error<I>> Parse<I> for TakeParser<I, E> {
     }
 }
 
+/// Creates a parser that takes a number of symbols from the input.
+///
+/// The returned parser will take `count` symbols from its input and
+/// return them as a [`Span`]. If there are not at least `count`
+/// symbols in the input, an error is returned, constructed from
+/// [`Error::need_more_input`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::unicode::{PResult};
+/// fn my_parser(input: &str) -> PResult<&str, &str> {
+///     take(5).parse_into().parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello"), Ok(Success("hello", "")));
+/// assert_eq!(my_parser.parse("hello world"), Ok(Success("hello", " world")));
+/// assert!(my_parser.parse("hi").is_err());
+/// ```
 #[inline]
 pub const fn take<I, E>(count: usize) -> impl Parse<I, Parsed = Span<I>, Error = E>
 where

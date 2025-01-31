@@ -60,3 +60,15 @@ impl<I: Input> Iterator for Span<I> {
         Input::next(self)
     }
 }
+
+impl<'a> From<Span<&'a str>> for &'a str {
+    fn from(span: Span<&'a str>) -> &'a str {
+        &span.start()[..(span.start().len() - span.end().len())]
+    }
+}
+
+impl<'a, T: Copy> From<Span<&'a [T]>> for &'a [T] {
+    fn from(span: Span<&'a [T]>) -> &'a [T] {
+        &span.start()[..(span.start().len() - span.end().len())]
+    }
+}
