@@ -602,6 +602,38 @@ where
     }
 }
 
+/// Converts a parser to produce a different return value.
+///
+/// If `parser` parses successfully, its returned value is immediately dropped.
+/// `with_fn` is then called to produce the new value. If `parser` fails,
+/// `with_fn` is not called.
+///
+/// See also [`Parse::with`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::with;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// #[derive(Debug, PartialEq)]
+/// enum Token {
+///     Begin,
+///     End,
+/// }
+///
+/// fn begin(input: &str) -> PResult<Token, &str> {
+///     with(verbatim("BEGIN"), || Token::Begin).parse(input)
+/// }
+///
+/// fn end(input: &str) -> PResult<Token, &str> {
+///     with(verbatim("END"), || Token::End).parse(input)
+/// }
+///
+/// assert_eq!(begin.parse("BEGIN hello"), Ok(Success(Token::Begin, " hello")));
+/// assert_eq!(end.parse("END world"), Ok(Success(Token::End, " world")));
+/// ```
 #[inline]
 pub const fn with<P, F, T, I>(parser: P, with_fn: F) -> impl Parse<I, Parsed = T, Error = P::Error>
 where
@@ -640,6 +672,33 @@ where
     }
 }
 
+/// Converts a parser to produce a different return value, via [`Default`].
+///
+/// If `parser` parses successfully, its returned value is immediately dropped.
+/// The old returned value is replaced with a value of type `T`, produced by
+/// calling [`Default::default()`].
+///
+/// `with_default(parser)` is equivalent to `with(parser, Default::default)`
+/// (see [`with`]).
+///
+/// See also [`Parse::with_default`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::with_default;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// #[derive(Debug, PartialEq, Default)]
+/// struct Token;
+///
+/// fn token(input: &str) -> PResult<Token, &str> {
+///     with_default(verbatim("TOKEN")).parse(input)
+/// }
+///
+/// assert_eq!(token.parse("TOKEN"), Ok(Success(Token, "")));
+/// ```
 #[inline]
 pub const fn with_default<P, T, I>(parser: P) -> impl Parse<I, Parsed = T, Error = P::Error>
 where
@@ -675,6 +734,29 @@ where
     }
 }
 
+/// Converts a parser to produce a different return value, via [`Clone`].
+///
+/// If `parser` parses successfully, its returned value is immediately dropped.
+/// `value` is is cloned to replace the returned value.
+///
+/// See also [`Parse::with_value`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::with_value;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// #[derive(Debug, PartialEq, Clone)]
+/// struct Token;
+///
+/// fn token(input: &str) -> PResult<Token, &str> {
+///     with_value(verbatim("TOKEN"), Token).parse(input)
+/// }
+///
+/// assert_eq!(token.parse("TOKEN"), Ok(Success(Token, "")));
+/// ```
 #[inline]
 pub const fn with_value<P, T, I>(parser: P, value: T) -> impl Parse<I, Parsed = T, Error = P::Error>
 where
