@@ -2660,6 +2660,46 @@ where
     }
 }
 
+/// Creates a parser whose parsed result or parsing error are converted via [`Into`].
+///
+/// If `parser` parses successfully, its result value is converted to `R` using the
+/// [`Into<R>`] trait. If `parser` fails, the returned parsing error is converted to
+/// `E` using the [`Into<E>`] trait.
+///
+/// See also [`Parse::res_into`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::{PResult, Error};
+/// # use pars::basic::res_into;
+/// # use pars::bytes;
+/// #[derive(Debug, PartialEq)]
+/// struct MyError<'a>(&'a [u8]);
+///
+/// # /*
+/// impl<'a> Error<&'a [u8]> for MyError<'a> { ... }
+/// impl<'a> From<bytes::Error<&'a [u8]>> for MyError<'a> { ... }
+/// # */
+/// # impl<'a> Error<&'a [u8]> for MyError<'a> {
+/// #     fn need_more_input(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn expected_eof(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn invalid_input(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn position(&self) -> &&'a [u8] { &self.0 }
+/// # }
+/// # impl<'a> From<bytes::Error<&'a [u8]>> for MyError<'a> {
+/// #     fn from(err: bytes::Error<&'a [u8]>) -> Self {
+/// #         Self(*err.position())
+/// #     }
+/// # }
+///
+/// fn my_parser(input: &[u8]) -> PResult<Vec<u8>, &[u8], MyError<'_>> {
+///     res_into(bytes::u8.array::<5>()).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"hello world") == Ok(Success(Vec::from(b"hello"), b" world")));
+/// assert!(my_parser.parse(b"hi") == Err(Failure(MyError(b""), b"hi")));
+/// ```
 #[inline]
 pub const fn res_into<P, R, E, I>(parser: P) -> impl Parse<I, Parsed = R, Error = E>
 where
@@ -2672,6 +2712,24 @@ where
     IntoParser(parser, PhantomData)
 }
 
+/// Creates a parser whose parsed result is converted via [`Into`].
+///
+/// If `parser` parses successfully, its result value is converted to `R` using the
+/// [`Into<R>`] trait.
+///
+/// See also [`Parse::ok_into`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::ok_into;
+/// # use pars::bytes::{self, PResult};
+/// fn my_parser(input: &[u8]) -> PResult<Vec<u8>, &[u8]> {
+///     ok_into(bytes::u8.array::<5>()).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"hello world") == Ok(Success(Vec::from(b"hello"), b" world")));
+/// ```
 #[inline]
 pub const fn ok_into<P, R, I>(parser: P) -> impl Parse<I, Parsed = R, Error = P::Error>
 where
@@ -2682,6 +2740,44 @@ where
     IntoParser(parser, PhantomData)
 }
 
+/// Creates a parser whose parsing error is converted via [`Into`].
+///
+/// If `parser` fails to parse, the returned parsing error is converted to
+/// `E` using the [`Into<E>`] trait.
+///
+/// See also [`Parse::err_into`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::{PResult, Error};
+/// # use pars::basic::res_into;
+/// # use pars::bytes;
+/// #[derive(Debug, PartialEq)]
+/// struct MyError<'a>(&'a [u8]);
+///
+/// # /*
+/// impl<'a> Error<&'a [u8]> for MyError<'a> { ... }
+/// impl<'a> From<bytes::Error<&'a [u8]>> for MyError<'a> { ... }
+/// # */
+/// # impl<'a> Error<&'a [u8]> for MyError<'a> {
+/// #     fn need_more_input(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn expected_eof(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn invalid_input(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn position(&self) -> &&'a [u8] { &self.0 }
+/// # }
+/// # impl<'a> From<bytes::Error<&'a [u8]>> for MyError<'a> {
+/// #     fn from(err: bytes::Error<&'a [u8]>) -> Self {
+/// #         Self(*err.position())
+/// #     }
+/// # }
+///
+/// fn my_parser(input: &[u8]) -> PResult<u8, &[u8], MyError<'_>> {
+///     res_into(bytes::u8).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"hello") == Ok(Success(b'h', b"ello")));
+/// assert!(my_parser.parse(b"") == Err(Failure(MyError(b""), b"")));
 #[inline]
 pub const fn err_into<P, E, I>(parser: P) -> impl Parse<I, Parsed = P::Parsed, Error = E>
 where
