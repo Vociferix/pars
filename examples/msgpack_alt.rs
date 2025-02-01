@@ -276,117 +276,45 @@ fn map32<I: BInput>(input: I) -> PResult<Object, I> {
         .parse(input)
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Prefix {
-    Nil,
-    BoolFalse,
-    BoolTrue,
-    PosFixInt(u8),
-    NegFixInt(i8),
-    UInt8,
-    UInt16,
-    UInt32,
-    UInt64,
-    Int8,
-    Int16,
-    Int32,
-    Int64,
-    Float32,
-    Float64,
-    FixStr(usize),
-    Str8,
-    Str16,
-    Str32,
-    Bin8,
-    Bin16,
-    Bin32,
-    FixArray(usize),
-    Array16,
-    Array32,
-    FixMap(usize),
-    Map16,
-    Map32,
-}
-
-impl<I: BInput> Parse<I> for Prefix {
-    type Parsed = Object;
-    type Error = Error<I>;
-
-    fn parse<N>(&self, input: N) -> PResult<Object, I>
-    where
-        N: IntoInput<Input = I>,
-    {
-        match self {
-            Self::Nil => nil.parse(input),
-            Self::BoolFalse => bool_false.parse(input),
-            Self::BoolTrue => bool_true.parse(input),
-            Self::PosFixInt(val) => pos_fix_int(*val).parse(input),
-            Self::NegFixInt(val) => neg_fix_int(*val).parse(input),
-            Self::UInt8 => uint8.parse(input),
-            Self::UInt16 => uint16.parse(input),
-            Self::UInt32 => uint32.parse(input),
-            Self::UInt64 => uint64.parse(input),
-            Self::Int8 => int8.parse(input),
-            Self::Int16 => int16.parse(input),
-            Self::Int32 => int32.parse(input),
-            Self::Int64 => int64.parse(input),
-            Self::Float32 => float32.parse(input),
-            Self::Float64 => float64.parse(input),
-            Self::FixStr(len) => fix_str(*len).parse(input),
-            Self::Str8 => str8.parse(input),
-            Self::Str16 => str16.parse(input),
-            Self::Str32 => str32.parse(input),
-            Self::Bin8 => bin8.parse(input),
-            Self::Bin16 => bin16.parse(input),
-            Self::Bin32 => bin32.parse(input),
-            Self::FixArray(len) => fix_array(*len).parse(input),
-            Self::Array16 => array16.parse(input),
-            Self::Array32 => array32.parse(input),
-            Self::FixMap(len) => fix_map(*len).parse(input),
-            Self::Map16 => map16.parse(input),
-            Self::Map32 => map32.parse(input),
-        }
-    }
-}
-
-fn prefix<I: BInput>(input: I) -> PResult<Prefix, I> {
+fn msgpack<I: BInput>(input: I) -> PResult<Object, I> {
     bytes::u8
-        .try_map(|b| match b {
-            0x00..0x80 => Ok(Prefix::PosFixInt(b)),
-            0xe0..=0xff => Ok(Prefix::NegFixInt(b as i8)),
-            0xc0 => Ok(Prefix::Nil),
-            0xc2 => Ok(Prefix::BoolFalse),
-            0xc3 => Ok(Prefix::BoolTrue),
-            0xcc => Ok(Prefix::UInt8),
-            0xcd => Ok(Prefix::UInt16),
-            0xce => Ok(Prefix::UInt32),
-            0xcf => Ok(Prefix::UInt64),
-            0xd0 => Ok(Prefix::Int8),
-            0xd1 => Ok(Prefix::Int16),
-            0xd2 => Ok(Prefix::Int32),
-            0xd3 => Ok(Prefix::Int64),
-            0xca => Ok(Prefix::Float32),
-            0xcb => Ok(Prefix::Float64),
-            0xa0..0xc0 => Ok(Prefix::FixStr((b & 0x1f) as usize)),
-            0xd9 => Ok(Prefix::Str8),
-            0xda => Ok(Prefix::Str16),
-            0xdb => Ok(Prefix::Str32),
-            0xc4 => Ok(Prefix::Bin8),
-            0xc5 => Ok(Prefix::Bin16),
-            0xc6 => Ok(Prefix::Bin32),
-            0x90..0xa0 => Ok(Prefix::FixArray((b & 0xf) as usize)),
-            0xdc => Ok(Prefix::Array16),
-            0xdd => Ok(Prefix::Array32),
-            0x80..0x90 => Ok(Prefix::FixMap((b & 0xf) as usize)),
-            0xde => Ok(Prefix::Map16),
-            0xdf => Ok(Prefix::Map32),
-            _ => Err(ErrorKind::InvalidInput),
+        .verify(|prefix| !matches!(*prefix, 0xc1 | 0xc7..0xca | 0xd4..0xd9))
+        .flat_map(|prefix| {
+            move |input: I| -> PResult<Object, I> {
+                match prefix {
+                    0x00..0x80 => pos_fix_int(prefix).parse(input),
+                    0xe0..=0xff => neg_fix_int(prefix as i8).parse(input),
+                    0xc0 => nil.parse(input),
+                    0xc2 => bool_false.parse(input),
+                    0xc3 => bool_true.parse(input),
+                    0xcc => uint8.parse(input),
+                    0xcd => uint16.parse(input),
+                    0xce => uint32.parse(input),
+                    0xcf => uint64.parse(input),
+                    0xd0 => int8.parse(input),
+                    0xd1 => int16.parse(input),
+                    0xd2 => int32.parse(input),
+                    0xd3 => int64.parse(input),
+                    0xca => float32.parse(input),
+                    0xcb => float64.parse(input),
+                    0xa0..0xc0 => fix_str((prefix & 0x1f) as usize).parse(input),
+                    0xd9 => str8.parse(input),
+                    0xda => str16.parse(input),
+                    0xdb => str32.parse(input),
+                    0xc4 => bin8.parse(input),
+                    0xc5 => bin16.parse(input),
+                    0xc6 => bin32.parse(input),
+                    0x90..0xa0 => fix_array((prefix & 0x0f) as usize).parse(input),
+                    0xdc => array16.parse(input),
+                    0xdd => array32.parse(input),
+                    0x80..0x90 => fix_map((prefix & 0x0f) as usize).parse(input),
+                    0xde => map16.parse(input),
+                    0xdf => map32.parse(input),
+                    _ => unreachable!(),
+                }
+            }
         })
         .parse(input)
-}
-
-fn msgpack<I: BInput>(input: I) -> PResult<Object, I> {
-    prefix.flat_map(|p| p).parse(input)
 }
 
 fn main() -> std::io::Result<()> {
