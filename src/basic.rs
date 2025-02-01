@@ -800,6 +800,31 @@ where
     }
 }
 
+/// Maps the result of a parser onto a combinator to produce a new parser.
+///
+/// If `parser` parses successfully, the result value is passed into
+/// `combinator`. The remaining input after `parser` succeeds is then
+/// parsed by the parser returned by `combinator`.
+///
+/// Generally, this combinator is useful for building a parser that should
+/// parse differently depending on information earlier in the input stream.
+///
+/// See also [`Parse::flat_map`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::flat_map;
+/// # use pars::bytes::{self, PResult};
+/// // First byte is the length of the string, then that many
+/// // more bytes is the string data.
+/// fn pascal_str(input: &[u8]) -> PResult<&[u8], &[u8]> {
+///     flat_map(bytes::u8.ok_into(), take).ok_into().parse(input)
+/// }
+///
+/// assert!(pascal_str.parse(b"\x05hello") == Ok(Success(b"hello", b"")));
+/// assert!(pascal_str.parse(b"\x05hi").is_err());
+/// ```
 #[inline]
 pub const fn flat_map<P, C, R, I>(
     parser: P,
@@ -852,6 +877,35 @@ where
     }
 }
 
+/// Maps the result of a parser onto a combinator to produce a new parser.
+///
+/// If `parser` parses successfully, the result value is passed into
+/// `combinator`. `combinator` then returns a `Result` containing either a
+/// new parser or an error implementing [`ErrorSeed`]. If a parser is
+/// returned, the remaining input from `parser` is passed to the new
+/// parser. Otherwise, the error is converted to a parsing error and
+/// returned.
+///
+/// See also [`Parse::try_flat_map`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::try_flat_map;
+/// # use pars::bytes::{self, PResult, ErrorKind};
+/// fn my_parser(input: &[u8]) -> PResult<&[u8], &[u8]> {
+///     try_flat_map(bytes::u8, |value| {
+///         if value < 10 {
+///             Ok(take(value.into()).ok_into())
+///         } else {
+///             Err(ErrorKind::InvalidInput)
+///         }
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x05hello") == Ok(Success(b"hello", b"")));
+/// assert!(my_parser.parse(b"\x0bhello world").is_err());
+/// ```
 #[inline]
 pub const fn try_flat_map<P, C, R, S, I>(
     parser: P,
