@@ -558,7 +558,7 @@ impl<I: Input, E: Error<I>> Parse<I> for TakeParser<I, E> {
 /// # use pars::prelude::*;
 /// # use pars::unicode::{PResult};
 /// fn my_parser(input: &str) -> PResult<&str, &str> {
-///     take(5).parse_into().parse(input)
+///     take(5).ok_into().parse(input)
 /// }
 ///
 /// assert_eq!(my_parser.parse("hello"), Ok(Success("hello", "")));
@@ -2633,15 +2633,17 @@ struct IntoParser<P, R, E, I>(P, PhantomData<fn() -> (R, E, I)>)
 where
     P: Parse<I>,
     I: Input,
-    R: From<P::Parsed>,
-    E: Error<I> + From<P::Error>;
+    P::Parsed: Into<R>,
+    P::Error: Into<E>,
+    E: Error<I>;
 
 impl<P, R, E, I> Parse<I> for IntoParser<P, R, E, I>
 where
     P: Parse<I>,
     I: Input,
-    R: From<P::Parsed>,
-    E: Error<I> + From<P::Error>,
+    P::Parsed: Into<R>,
+    P::Error: Into<E>,
+    E: Error<I>,
 {
     type Parsed = R;
     type Error = E;
@@ -2652,19 +2654,41 @@ where
     {
         let input = input.into_input();
         match self.0.parse(input) {
-            Ok(Success(val, rem)) => Ok(Success(R::from(val), rem)),
-            Err(Failure(err, rem)) => Err(Failure(E::from(err), rem)),
+            Ok(Success(val, rem)) => Ok(Success(val.into(), rem)),
+            Err(Failure(err, rem)) => Err(Failure(err.into(), rem)),
         }
     }
 }
 
 #[inline]
-pub const fn into<P, R, E, I>(parser: P) -> impl Parse<I, Parsed = R, Error = E>
+pub const fn res_into<P, R, E, I>(parser: P) -> impl Parse<I, Parsed = R, Error = E>
 where
     P: Parse<I>,
     I: Input,
-    R: From<P::Parsed>,
-    E: Error<I> + From<P::Error>,
+    P::Parsed: Into<R>,
+    P::Error: Into<E>,
+    E: Error<I>,
+{
+    IntoParser(parser, PhantomData)
+}
+
+#[inline]
+pub const fn ok_into<P, R, I>(parser: P) -> impl Parse<I, Parsed = R, Error = P::Error>
+where
+    P: Parse<I>,
+    I: Input,
+    P::Parsed: Into<R>,
+{
+    IntoParser(parser, PhantomData)
+}
+
+#[inline]
+pub const fn err_into<P, E, I>(parser: P) -> impl Parse<I, Parsed = P::Parsed, Error = E>
+where
+    P: Parse<I>,
+    I: Input,
+    P::Error: Into<E>,
+    E: Error<I>,
 {
     IntoParser(parser, PhantomData)
 }

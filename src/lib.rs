@@ -240,7 +240,7 @@
 //!
 //! When combining a user defined error with parsers that use a different error type,
 //! such as [`bytes::u8`](./bytes/fn.u8.html), there are a few ways this can be dealt with.
-//! The simplest way is to use [`basic::into`] (or [`Parse::parse_into`]).
+//! The simplest way is to use [`Parse::err_into`].
 //!
 //! ```
 //! # use pars::{bytes, Input, ErrorSeed, Error, Parse, PResult};
@@ -290,7 +290,7 @@
 //!
 //! fn my_u8<I: bytes::ByteInput>(input: I) -> PResult<u8, I, MyError<I>> {
 //!     // Changes `bytes::u8` to return `MyError` instead of `bytes::Error`
-//!     bytes::u8.parse_into().parse(input)
+//!     bytes::u8.err_into().parse(input)
 //! }
 //! ```
 //!
@@ -504,12 +504,30 @@ pub trait Parse<I: Input>: Sized {
     }
 
     #[inline]
-    fn parse_into<R, E>(self) -> impl Parse<I, Parsed = R, Error = E>
+    fn res_into<R, E>(self) -> impl Parse<I, Parsed = R, Error = E>
     where
-        R: From<Self::Parsed>,
-        E: Error<I> + From<Self::Error>,
+        Self::Parsed: Into<R>,
+        Self::Error: Into<E>,
+        E: Error<I>,
     {
-        basic::into(self)
+        basic::res_into(self)
+    }
+
+    #[inline]
+    fn ok_into<R>(self) -> impl Parse<I, Parsed = R, Error = Self::Error>
+    where
+        Self::Parsed: Into<R>,
+    {
+        basic::ok_into(self)
+    }
+
+    #[inline]
+    fn err_into<E>(self) -> impl Parse<I, Parsed = Self::Parsed, Error = E>
+    where
+        Self::Error: Into<E>,
+        E: Error<I>,
+    {
+        basic::err_into(self)
     }
 
     #[inline]
