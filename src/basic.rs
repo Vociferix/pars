@@ -959,6 +959,30 @@ where
     }
 }
 
+/// Creates a parser that attempts to match input verbatim.
+///
+/// `pattern` is a sequence of input symbols. The returned parser will succeed if
+/// the input begins with `pattern` exactly.
+///
+/// See also:
+/// * [`bytes::verbatim`](../bytes/fn.verbatim.html)
+/// * [`ascii::strict::verbatim`](../ascii/strict/fn.verbatim.html)
+/// * [`ascii::lossy::verbatim`](../ascii/lossy/fn.verbatim.html)
+/// * [`unicode::strict::verbatim`](../unicode/strict/fn.verbatim.html)
+/// * [`unicode::lossy::verbatim`](../unicode/lossy/fn.verbatim.html)
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::verbatim;
+/// # use pars::unicode::PResult;
+/// fn hello(input: &str) -> PResult<&str, &str> {
+///     verbatim("hello").ok_into().parse(input)
+/// }
+///
+/// assert_eq!(hello.parse("hello world"), Ok(Success("hello", " world")));
+/// assert!(hello.parse("Hello World").is_err());
+/// ```
 #[inline]
 pub const fn verbatim<P, I, E>(pattern: P) -> impl Parse<I, Parsed = Span<I>, Error = E>
 where
