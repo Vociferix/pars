@@ -994,6 +994,19 @@ where
     VerbatimParser(pattern, PhantomData)
 }
 
+/// A parser that extracts one symbol from the input stream.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::unicode::PResult;
+/// fn my_parser(input: &str) -> PResult<char, &str> {
+///    pop.parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello"), Ok(Success('h', "ello")));
+/// assert!(my_parser.parse("").is_err());
+/// ```
 pub fn pop<I: Input, E: Error<I>>(mut input: I) -> PResult<I::Symbol, I, E> {
     if let Some(symb) = input.next() {
         Ok(Success(symb, input))
@@ -1030,6 +1043,25 @@ where
     }
 }
 
+/// Creates a parser that returns a fallback value instead of an error.
+///
+/// If `parser` fails to parse, `value` is cloned and returned as a success
+/// value. The new parser will never return a parsing error.
+///
+/// See also [`Parse::or_value`]
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::or_value;
+/// # use pars::unicode::{self, PResult};
+/// fn my_parser(input: &str) -> PResult<char, &str> {
+///     or_value(unicode::strict::char, '\0').parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello"), Ok(Success('h', "ello")));
+/// assert_eq!(my_parser.parse(""), Ok(Success('\0', "")));
+/// ```
 #[inline]
 pub const fn or_value<P, I>(
     parser: P,
@@ -1067,6 +1099,26 @@ where
     }
 }
 
+/// Creates a parser that returns a fallback value instead of an error.
+///
+/// If `parser` fails to parse, a default value is returned by calling
+/// [`Default::default`] instead of returning the error. The new parser
+/// will never return a parsing error.
+///
+/// See also [`Parse::or_default`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::or_default;
+/// # use pars::unicode::{self, PResult};
+/// fn my_parser(input: &str) -> PResult<char, &str> {
+///     or_default(unicode::strict::char).parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello"), Ok(Success('h', "ello")));
+/// assert_eq!(my_parser.parse(""), Ok(Success('\0', "")));
+/// ```
 #[inline]
 pub const fn or_default<P, I>(parser: P) -> impl Parse<I, Parsed = P::Parsed, Error = P::Error>
 where
@@ -1105,6 +1157,26 @@ where
     }
 }
 
+/// Creates a parser that returns a fallback value instead of an error.
+///
+/// If `parser` fails to parse, `or_else_fn` is called and its return value
+/// is returned as a success value. The new parser will never return a
+/// parsing error.
+///
+/// See also [`Parse::or_else`]
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::or_else;
+/// # use pars::unicode::{self, PResult};
+/// fn my_parser(input: &str) -> PResult<char, &str> {
+///     or_else(unicode::strict::char, || '\0').parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello"), Ok(Success('h', "ello")));
+/// assert_eq!(my_parser.parse(""), Ok(Success('\0', "")));
+/// ```
 #[inline]
 pub const fn or_else<P, F, I>(
     parser: P,
