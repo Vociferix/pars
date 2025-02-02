@@ -1190,6 +1190,21 @@ where
     OrElseParser(parser, or_else_fn, PhantomData)
 }
 
+/// An [`Iterator`] over repeated applications of a parser.
+///
+/// When using the combinators [`many0`], [`try_many0`], and [`collect_many0`],
+/// this iterator type is used as the interface into the repeated applications
+/// of the provided parser. The [`Iterator::Item`] is the [`Parse::Parsed`]
+/// type of the provided parser. Iteration stops only when the parser returns a
+/// parsing error.
+///
+/// Note that consuming the iterator is not required. The combinators that use
+/// [`Many0Iter`] will ensure that the iterator is completely consumed if the
+/// user does not iterate to the end. A common pattern is to ignore the
+/// iterator altogether when the parsed values are not needed (such as parsing
+/// whitespace in text). For example, `parser.many0(|_| ())`.
+///
+/// See [`many0`], [`try_many0`], and [`collect_many0`] for examples.
 #[derive(Debug)]
 pub struct Many0Iter<'a, P, I>(&'a P, &'a mut I)
 where
