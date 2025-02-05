@@ -1257,6 +1257,37 @@ where
     }
 }
 
+/// Creates a parser that is repeated as many times as possible.
+///
+/// [`many0`] produces a parser that will apply `parser` repeatedly until
+/// it returns a parsing error. The parsed values are passed to `collect_fn`
+/// in the form of an iterator, [`Many0Iter`]. Whatever `collect_fn`
+/// returns is the parsed value of the new parser.
+///
+/// Because [`many0`] permits any number of successful repetitions,
+/// including zero, the returned parser will never produce a parsing error.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::many0`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::many0;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// fn count_spaces(input: &str) -> PResult<usize, &str> {
+///     many0(verbatim(" "), |iter| iter.count()).parse(input)
+/// }
+///
+/// assert_eq!(count_spaces.parse("    hello"), Ok(Success(4, "hello")));
+/// assert_eq!(count_spaces.parse("hello"), Ok(Success(0, "hello")));
+/// ```
 #[inline]
 pub const fn many0<P, F, R, I>(
     parser: P,
