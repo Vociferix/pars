@@ -1355,6 +1355,21 @@ where
     CollectMany0Parser(parser, PhantomData)
 }
 
+/// An [`Iterator`] over repeated applications of a parser.
+///
+/// When using the combinators [`many1`], [`try_many1`], and [`collect_many1`],
+/// this iterator type is used as the interface into the repeated applications
+/// of the provided parser. The [`Iterator::Item`] is the [`Parse::Parsed`]
+/// type of the provided parser. Iteration stops only when the parser returns a
+/// parsing error.
+///
+/// Note that consuming the iterator is not required. The combinators that use
+/// [`Many1Iter`] will ensure that the iterator is completely consumed if the
+/// user does not iterate to the end. A common pattern is to ignore the
+/// iterator altogether when the parsed values are not needed (such as parsing
+/// whitespace in text). For example, `parser.many1(|_| ())`.
+///
+/// See [`many1`], [`try_many1`], and [`collect_many1`] for examples.
 #[derive(Debug)]
 pub struct Many1Iter<'a, P, I>(&'a P, &'a mut I, &'a mut bool, &'a mut Option<P::Error>)
 where
@@ -1528,6 +1543,21 @@ where
     CollectMany1Parser(parser, PhantomData)
 }
 
+/// An [`Iterator`] over repeated applications of a parser.
+///
+/// When using the combinators [`repeated`], [`try_repeated`], and
+/// [`collect_repeated`], this iterator type is used as the interface into the
+/// repeated applications of the provided parser. The [`Iterator::Item`] is the
+/// [`Parse::Parsed`] type of the provided parser. Iteration stops only when the
+/// parser returns a parsing error.
+///
+/// Note that consuming the iterator is not required. The combinators that use
+/// [`RepeatedIter`] will ensure that the iterator is completely consumed if the
+/// user does not iterate to the end. A common pattern is to ignore the
+/// iterator altogether when the parsed values are not needed. For example,
+/// `parser.repeated(10, |_| ())`.
+///
+/// See [`repeated`], [`try_repeated`], and [`collect_repeated`] for examples.
 #[derive(Debug)]
 pub struct RepeatedIter<'a, P, I>(&'a P, &'a mut I, &'a mut usize, &'a mut Option<P::Error>)
 where
@@ -1713,6 +1743,21 @@ where
     CollectRepeatedParser(parser, count, PhantomData)
 }
 
+/// An [`Iterator`] over repeated applications of a parser.
+///
+/// When using the combinators [`many_until`], [`try_many_until`], and
+/// [`collect_many_until`], this iterator type is used as the interface into the
+/// repeated applications of the provided parser. The [`Iterator::Item`] is the
+/// [`Parse::Parsed`] type of the provided parser.
+///
+/// Note that consuming the iterator is not required. The combinators that use
+/// [`ManyUntilIter`] will ensure that the iterator is completely consumed if the
+/// user does not iterate to the end. A common pattern is to ignore the
+/// iterator altogether when the parsed values are not needed. For example,
+/// `parser.many_until(sentinel, |_| ())`.
+///
+/// See [`many_until`], [`try_many_until`], and [`collect_many_until`] for
+/// examples.
 #[derive(Debug)]
 pub struct ManyUntilIter<'a, P, Q, I>(
     &'a P,
@@ -1915,6 +1960,20 @@ where
     CollectManyUntilParser(parser, sentinel, PhantomData)
 }
 
+/// An [`Iterator`] over repeated applications of a parser.
+///
+/// When using the combinators [`many`], [`try_many`], and [`collect_many`],
+/// this iterator type is used as the interface into the repeated applications
+/// of the provided parser. The [`Iterator::Item`] is the [`Parse::Parsed`]
+/// type of the provided parser.
+///
+/// Note that consuming the iterator is not required. The combinators that use
+/// [`ManyIter`] will ensure that the iterator is completely consumed if the
+/// user does not iterate to the end. A common pattern is to ignore the
+/// iterator altogether when the parsed values are not needed. For example,
+/// `parser.many(3.., |_| ())`.
+///
+/// See [`many`], [`try_many`], and [`collect_many`] for examples.
 #[derive(Debug)]
 pub struct ManyIter<'a, P, I>(
     &'a P,
