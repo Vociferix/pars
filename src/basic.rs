@@ -1831,6 +1831,35 @@ where
     }
 }
 
+/// Creates a parser that is repeated a set number of times.
+///
+/// [`repeated`] produces a parser that will apply `parser` `count` times.
+/// The parsed values are passed to `collect_fn` in the form of an iterator,
+/// [`RepeatedIter`]. Whatever `collect_fn` returns is the parsed value of
+/// the new parser. If `parser` fails to parse before parsing `count` times,
+/// a parsing error is returned.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::repeated`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::repeated;
+/// # use pars::bytes::{self, PResult};
+/// fn my_parser(input: &[u8]) -> PResult<u32, &[u8]> {
+///     repeated(bytes::u8, 4, |iter| {
+///         iter.map(|byte| byte as u32).sum()
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") == Ok(Success(10, b"\x05")));
+/// assert!(my_parser.parse(b"\x01\x02\x03").is_err());
+/// ```
 #[inline]
 pub const fn repeated<P, F, R, I>(
     parser: P,
@@ -1885,6 +1914,45 @@ where
     }
 }
 
+/// Creates a parser that is repeated a set number of times.
+///
+/// [`repeated`] produces a parser that will apply `parser` `count` times.
+/// The parsed values are passed to `collect_fn` in the form of an iterator,
+/// [`RepeatedIter`]. If `collect_fn` returns an [`Ok`] value, that value
+/// becomes the parsed result of the new parser. If `collect_fn` returns an
+/// [`Err`], the contained value becomes a parsing error via [`ErrorSeed`].
+/// If `parser` fails to parse before parsing `count` times, a parsing error
+/// is returned.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::try_repeated`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::try_repeated;
+/// # use pars::ErrorKind;
+/// # use pars::bytes::{self, PResult};
+/// // requires the resulting sum be even
+/// fn my_parser(input: &[u8]) -> PResult<u32, &[u8]> {
+///     try_repeated(bytes::u8, 4, |iter| {
+///         let sum = iter.map(|byte| byte as u32).sum();
+///         if sum % 2 == 0 {
+///             Ok(sum)
+///         } else {
+///             Err(ErrorKind::InvalidInput)
+///         }
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") == Ok(Success(10, b"\x05")));
+/// assert!(my_parser.parse(b"\x00\x02\x03\x04").is_err());
+/// assert!(my_parser.parse(b"\x01\x02\x03").is_err());
+/// ```
 #[inline]
 pub const fn try_repeated<P, F, R, S, I>(
     parser: P,
@@ -1933,6 +2001,35 @@ where
     }
 }
 
+/// Creates a parser that is repeated a set number of times.
+///
+/// [`repeated`] produces a parser that will apply `parser` `count` times.
+/// The parsed values are collected using the [`FromIterator`] trait
+/// implementation on the parsed result type, which is usually deduced.
+/// If `parser` fails to parse `count` times, a parsing error is returned.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// Note that the returned new parser does not allocate unless the
+/// [`FromIterator`] implementation allocates.
+///
+/// See also [`Parse::repeated`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::collect_repeated;
+/// # use pars::unicode::{self, PResult};
+/// fn my_parser(input: &str) -> PResult<String, &str> {
+///     collect_repeated(unicode::strict::char, 5).parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello world"), Ok(Success(String::from("hello"), " world")));
+/// assert!(my_parser.parse("hi").is_err());
+/// ```
 #[inline]
 pub const fn collect_repeated<P, C, I>(
     parser: P,
