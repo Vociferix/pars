@@ -122,6 +122,18 @@
 //!
 //! See the documentation for [`IntoInput`] for more details.
 //!
+//! Since [`Input`] does not have any constraints on what a "symbol" can be, `pars`
+//! can be adapted to consume pretty much any kind of input stream. For example, in
+//! some cases it might be desirable to build a lexer (or scanner) to interpret the
+//! source input as a stream of tokens, and parse the token stream with `pars`
+//! instead of the source input. Sufficiently complex parsers, such as compiler
+//! frontends, generally prefer this approach. The lexer just needs to provide an
+//! interface with a type that implements [`Input`]. Note that it will usually
+//! be necessary for the lexer (or whatever the custom input source is) to be
+//! "multi-pass" in order to support parser backtracking.
+//!
+//! TODO: Include a custom input example.
+//!
 //! # Defining a Parser
 //! Most user defined parsers should be implemented as a plain function. Types
 //! implementing [`Fn(I) -> PResult<T, I, E>`](core::ops::Fn), where `I`
