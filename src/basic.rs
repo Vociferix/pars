@@ -3297,7 +3297,7 @@ where
 ///
 /// If `parser` parses successfully, its result value is converted to `R` using the
 /// [`TryInto<R>`] trait. If [`TryInto`] fails, a parsing error is returned by calling
-/// [`E::invalid_input`](Error::invalid_input).
+/// [`Error::invalid_input`].
 ///
 /// See also [`Parse::ok_try_into`].
 ///
