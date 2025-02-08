@@ -298,6 +298,48 @@ impl UnicodeSymbol for i8 {
     }
 }
 
+#[cfg(feature = "ascii")]
+impl UnicodeSymbol for crate::ascii::AsciiChar {
+    fn parse_char<I>(mut input: I) -> PResult<core::primitive::char, I>
+    where
+        I: Input<Symbol = crate::ascii::AsciiChar>,
+    {
+        let ch = input.next();
+        match ch {
+            Some(ch) => Ok(Success(ch.into(), input)),
+            None => Err(Failure(Error::need_more_input(input.clone()), input)),
+        }
+    }
+
+    fn parse_char_lossy<I>(input: I) -> PResult<core::primitive::char, I>
+    where
+        I: Input<Symbol = crate::ascii::AsciiChar>,
+    {
+        Self::parse_char(input)
+    }
+
+    fn parse_utf8<I>(mut input: I, buf: &mut [u8]) -> PResult<&str, I>
+    where
+        I: Input<Symbol = crate::ascii::AsciiChar>,
+    {
+        let ch = input.next();
+        match ch {
+            Some(ch) => {
+                buf[0] = ch.into();
+                Ok(Success(unsafe { core::mem::transmute(&buf[..1]) }, input))
+            }
+            None => Err(Failure(Error::need_more_input(input.clone()), input)),
+        }
+    }
+
+    fn parse_utf8_lossy<I>(input: I, buf: &mut [u8]) -> PResult<&str, I>
+    where
+        I: Input<Symbol = crate::ascii::AsciiChar>,
+    {
+        Self::parse_utf8(input, buf)
+    }
+}
+
 trait AsU8 {
     fn as_u8(self) -> u8;
 }
