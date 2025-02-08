@@ -543,6 +543,24 @@ pub trait Parse<I: Input>: Sized {
     }
 
     #[inline]
+    fn res_try_into<R, E>(self) -> impl Parse<I, Parsed = R, Error = E>
+    where
+        Self::Parsed: core::convert::TryInto<R>,
+        Self::Error: Into<E>,
+        E: Error<I>,
+    {
+        basic::res_try_into(self)
+    }
+
+    #[inline]
+    fn ok_try_into<R>(self) -> impl Parse<I, Parsed = R, Error = Self::Error>
+    where
+        Self::Parsed: core::convert::TryInto<R>,
+    {
+        basic::ok_try_into(self)
+    }
+
+    #[inline]
     fn with<F, T>(self, with_fn: F) -> impl Parse<I, Parsed = T, Error = Self::Error>
     where
         F: Fn() -> T,

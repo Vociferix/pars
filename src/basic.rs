@@ -3199,3 +3199,127 @@ where
 {
     IntoParser(parser, PhantomData)
 }
+
+struct TryIntoParser<P, R, E, I>(P, PhantomData<fn() -> (R, E, I)>)
+where
+    P: Parse<I>,
+    I: Input,
+    P::Parsed: core::convert::TryInto<R>,
+    P::Error: Into<E>,
+    E: Error<I>;
+
+impl<P, R, E, I> Parse<I> for TryIntoParser<P, R, E, I>
+where
+    P: Parse<I>,
+    I: Input,
+    P::Parsed: core::convert::TryInto<R>,
+    P::Error: Into<E>,
+    E: Error<I>,
+{
+    type Parsed = R;
+    type Error = E;
+
+    fn parse<N>(&self, input: N) -> PResult<R, I, E>
+    where
+        N: IntoInput<Input = I>,
+    {
+        let input = input.into_input();
+        match self.0.parse(input.clone()) {
+            Ok(Success(val, rem)) => match val.try_into() {
+                Ok(val) => Ok(Success(val, rem)),
+                Err(_) => Err(Failure(E::invalid_input(input.clone()), input)),
+            },
+            Err(Failure(err, rem)) => Err(Failure(err.into(), rem)),
+        }
+    }
+}
+
+/// Creates a parser whose parsed result is converted via [`TryInto`](core::convert::TryInto).
+///
+/// If `parser` parses successfully, its result value is converted to `R` using the
+/// [`TryInto<R>`](core::convert::TryInto) trait. If [`TryInto`](core::convert::TryInto)
+/// fails, a parsing error is returned by calling [`E::invalid_input`](Error::invalid_input).
+/// If `parser` returns a parsing error, that error is converted to `E` using the [`Into<E>`]
+/// trait.
+///
+/// Note that the parsing error is not converted using [`TryInto`](core::convert::TryInto),
+/// but rather the infallible [`Into`] trait. Only the successfully parsed result converts
+/// via [`TryInto`](core::convert::TryInto).
+///
+/// See also [`Parse::res_try_into`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::{PResult, Error};
+/// # use pars::basic::res_try_into;
+/// # use pars::bytes;
+/// #[derive(Debug, PartialEq)]
+/// struct MyError<'a>(&'a [u8]);
+///
+/// # /*
+/// impl<'a> Error<&'a [u8]> for MyError<'a> { ... }
+/// impl<'a> From<bytes::Error<&'a [u8]>> for MyError<'a> { ... }
+/// # */
+/// # impl<'a> Error<&'a [u8]> for MyError<'a> {
+/// #     fn need_more_input(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn expected_eof(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn invalid_input(pos: &'a [u8]) -> Self { Self(pos) }
+/// #     fn position(&self) -> &&'a [u8] { &self.0 }
+/// # }
+/// # impl<'a> From<bytes::Error<&'a [u8]>> for MyError<'a> {
+/// #     fn from(err: bytes::Error<&'a [u8]>) -> Self {
+/// #         Self(*err.position())
+/// #     }
+/// # }
+///
+/// fn my_parser(input: &[u8]) -> PResult<char, &[u8], MyError<'_>> {
+///     res_try_into(bytes::be::u32).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x00\x00\x00hello") == Ok(Success('h', b"ello")));
+/// assert!(my_parser.parse(b"\xff\xff\xffhello")
+///     == Err(Failure(MyError(b"\xff\xff\xffhello"), b"\xff\xff\xffhello")));
+/// assert!(my_parser.parse(b"") == Err(Failure(MyError(b""), b"")));
+/// ```
+#[inline]
+pub const fn res_try_into<P, R, E, I>(parser: P) -> impl Parse<I, Parsed = R, Error = E>
+where
+    P: Parse<I>,
+    I: Input,
+    P::Parsed: core::convert::TryInto<R>,
+    P::Error: Into<E>,
+    E: Error<I>,
+{
+    TryIntoParser(parser, PhantomData)
+}
+
+/// Creates a parser whose parsed result is converted via [`TryInto`](core::convert::TryInto).
+///
+/// If `parser` parses successfully, its result value is converted to `R` using the
+/// [`TryInto<R>`](core::convert::TryInto) trait. If [`TryInto`](core::convert::TryInto)
+/// fails, a parsing error is returned by calling [`E::invalid_input`](Error::invalid_input).
+///
+/// See also [`Parse::ok_try_into`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::ok_try_into;
+/// # use pars::bytes::{self, PResult};
+/// fn my_parser(input: &[u8]) -> PResult<char, &[u8]> {
+///     ok_try_into(bytes::be::u32).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x00\x00\x00hello") == Ok(Success('h', b"ello")));
+/// assert!(my_parser.parse(b"\xff\xff\xffhello").is_err());
+/// ```
+#[inline]
+pub const fn ok_try_into<P, R, I>(parser: P) -> impl Parse<I, Parsed = R, Error = P::Error>
+where
+    P: Parse<I>,
+    I: Input,
+    P::Parsed: core::convert::TryInto<R>,
+{
+    TryIntoParser(parser, PhantomData)
+}
