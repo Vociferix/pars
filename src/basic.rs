@@ -1335,6 +1335,50 @@ where
     }
 }
 
+/// Creates a parser that is repeated as many times as possible.
+///
+/// [`try_many0`] produces a parser that will apply `parser` repeatedly until
+/// it returns a parsing error. The parsed values are passed to `collect_fn`
+/// in the form of an iterator, [`Many0Iter`]. If `collect_fn` returns an
+/// [`Ok`] value, that becomes the parsed result of the new parser. If
+/// `collect_fn` returns an [`Err`], the new parser returns a parsing error
+/// by converting the contained value via [`ErrorSeed`].
+///
+/// Because [`try_many0`] permits any number of successful repetitions,
+/// including zero, the returned parser will only return a parsing error if
+/// `collect_fn` returns an [`Err`].
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::try_many0`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::try_many0;
+/// # use pars::ErrorKind;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// // only allows an even number of spaces
+/// fn count_spaces(input: &str) -> PResult<usize, &str> {
+///     try_many0(verbatim(" "), |iter| {
+///         let count = iter.count();
+///         if count % 2 == 0 {
+///             Ok(count)
+///         } else {
+///             Err(ErrorKind::InvalidInput)
+///         }
+///     }).parse(input)
+/// }
+///
+/// assert_eq!(count_spaces.parse("    hello"), Ok(Success(4, "hello")));
+/// assert_eq!(count_spaces.parse("hello"), Ok(Success(0, "hello")));
+/// assert!(count_spaces.parse(" hello").is_err());
+/// ```
 #[inline]
 pub const fn try_many0<P, F, R, S, I>(
     parser: P,
@@ -1376,6 +1420,36 @@ where
     }
 }
 
+/// Creates a parser that is repeated as many times as possible.
+///
+/// [`collect_many0`] produces a parser that will apply `parser` repeatedly
+/// until it returns a parsing error. The parsed values are collected via
+/// the [`FromIterator`] trait implementation on the parsed type of the new
+/// parser, which is generally deduced.
+///
+/// Because [`collect_many0`] permits any number of successful repetitions,
+/// including zero, the returned parser will never produce a parsing error.
+///
+/// Note that the returned new parser does not allocate unless the
+/// [`FromIterator`] implementation allocates.
+///
+/// See also [`Parse::collect_many0`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::collect_many0;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::{prop::Alphabetic, strict::char_with_prop};
+///
+/// fn word(input: &str) -> PResult<String, &str> {
+///     collect_many0(char_with_prop(Alphabetic)).parse(input)
+/// }
+///
+/// assert_eq!(word.parse("hello world"), Ok(Success(String::from("hello"), " world")));
+/// assert_eq!(word.parse(""), Ok(Success(String::new(), "")));
+/// assert_eq!(word.parse(" "), Ok(Success(String::new(), " ")));
+/// ```
 #[inline]
 pub const fn collect_many0<P, C, I>(parser: P) -> impl Parse<I, Parsed = C, Error = P::Error>
 where
