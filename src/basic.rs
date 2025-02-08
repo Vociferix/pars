@@ -1538,6 +1538,35 @@ where
     }
 }
 
+/// Creates a parser that is repeated at least once.
+///
+/// [`many1`] produces a parser that will apply `parser` repeatedly until
+/// it returns a parsing error. The parsed values are passed to `collect_fn`
+/// in the form of an iterator, [`Many1Iter`]. Whatever `collect_fn`
+/// returns is the parsed value of the new parser. If `parser` does not
+/// successfully parse at least once, a parsing error is returned.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::many1`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::many1;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// fn count_spaces(input: &str) -> PResult<usize, &str> {
+///     many1(verbatim(" "), |iter| iter.count()).parse(input)
+/// }
+///
+/// assert_eq!(count_spaces.parse("    hello"), Ok(Success(4, "hello")));
+/// assert!(count_spaces.parse("hello").is_err());
+/// ```
 #[inline]
 pub const fn many1<P, F, R, I>(
     parser: P,
@@ -1591,6 +1620,47 @@ where
     }
 }
 
+/// Creates a parser that is repeated at least once.
+///
+/// [`try_many1`] produces a parser that will apply `parser` repeatedly until
+/// it returns a parsing error. The parsed values are passed to `collect_fn`
+/// in the form of an iterator, [`Many1Iter`]. If `collect_fn` returns an
+/// [`Ok`] value, that becomes the parsed result of the new parser. If
+/// `collect_fn` returns an [`Err`], the new parser returns a parsing error
+/// by converting the contained value via [`ErrorSeed`]. If `parser` does not
+/// successfully parse at least once, a parsing error is returned.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::try_many1`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::try_many1;
+/// # use pars::ErrorKind;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// // only allows an odd number of spaces
+/// fn count_spaces(input: &str) -> PResult<usize, &str> {
+///     try_many1(verbatim(" "), |iter| {
+///         let count = iter.count();
+///         if count % 2 == 0 {
+///             Err(ErrorKind::InvalidInput)
+///         } else {
+///             Ok(count)
+///         }
+///     }).parse(input)
+/// }
+///
+/// assert_eq!(count_spaces.parse("   hello"), Ok(Success(3, "hello")));
+/// assert!(count_spaces.parse("hello").is_err());
+/// assert!(count_spaces.parse("  hello").is_err());
+/// ```
 #[inline]
 pub const fn try_many1<P, F, R, S, I>(
     parser: P,
@@ -1638,6 +1708,34 @@ where
     }
 }
 
+/// Creates a parser that is repeated at east once.
+///
+/// [`collect_many1`] produces a parser that will apply `parser` repeatedly
+/// until it returns a parsing error. The parsed values are collected via
+/// the [`FromIterator`] trait implementation on the parsed type of the new
+/// parser, which is generally deduced. If `parser` does not successfully
+/// parse at least once, a parsing error is returned.
+///
+/// Note that the returned new parser does not allocate unless the
+/// [`FromIterator`] implementation allocates.
+///
+/// See also [`Parse::collect_many1`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::collect_many1;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::{prop::Alphabetic, strict::char_with_prop};
+///
+/// fn word(input: &str) -> PResult<String, &str> {
+///     collect_many1(char_with_prop(Alphabetic)).parse(input)
+/// }
+///
+/// assert_eq!(word.parse("hello world"), Ok(Success(String::from("hello"), " world")));
+/// assert!(word.parse("").is_err());
+/// assert!(word.parse(" ").is_err());
+/// ```
 #[inline]
 pub const fn collect_many1<P, C, I>(parser: P) -> impl Parse<I, Parsed = C, Error = P::Error>
 where
