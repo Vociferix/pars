@@ -2138,6 +2138,41 @@ where
     }
 }
 
+/// Creates a parser that is repeated until a sentinel is parsed.
+///
+/// [`many_until`] produces a parser that will apply `parser` repeatedly until
+/// `sentinel_parser` succeeds. That is, `sentinel_parser` is applied; if it fails,
+/// `parser` is applied before trying `sentinel_parser` again. If `sentinel_parser`
+/// succeeds, parsing is complete.
+///
+/// The values produced by `parser` are passed to `collect_fn` in the form of an
+/// iterator, [`ManyUntilIter`]. The value returned by `collect_fn` and the parsed
+/// value from `sentinel_parser` together as a 2-tuple become the parsed result of
+/// the overall new parser. If `parser` returns a parsing error at any point, a
+/// parsing error is returned from the overall new parser.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::many_until`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::many_until;
+/// # use pars::bytes::{self, PResult};
+/// fn c_str_len(input: &[u8]) -> PResult<usize, &[u8]> {
+///     many_until(bytes::u8, bytes::verbatim(b"\x00"), |iter| iter.count())
+///         .map(|(len, _)| len) // we only want the length
+///         .parse(input)
+/// }
+///
+/// assert!(c_str_len.parse(b"hello\x00world") == Ok(Success(5, b"world")));
+/// assert!(c_str_len.parse(b"\x00") == Ok(Success(0, b"")));
+/// assert!(c_str_len.parse(b"hello").is_err());
+/// ```
 #[inline]
 pub const fn many_until<P, Q, F, R, I>(
     parser: P,
@@ -2195,6 +2230,50 @@ where
     }
 }
 
+/// Creates a parser that is repeated until a sentinel is parsed.
+///
+/// [`try_many_until`] produces a parser that will apply `parser` repeatedly until
+/// `sentinel_parser` succeeds. That is, `sentinel_parser` is applied; if it fails,
+/// `parser` is applied before trying `sentinel_parser` again. If `sentinel_parser`
+/// succeeds, parsing is complete.
+///
+/// The values produced by `parser` are passed to `collect_fn` in the form of an
+/// iterator, [`ManyUntilIter`]. If `collect_fn` returns an [`Ok`] value, that and
+/// the value from `sentinel_parser` together as a 2-tuple become the parsed result
+/// of the overall new parser. If `collect_fn` returns an [`Err`], a parsing error
+/// is returned. If `parser` returns a parsing error at any point, a parsing error
+/// is returned form the overall new parser.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// See also [`Parse::try_many_until`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::try_many_until;
+/// # use pars::ErrorKind;
+/// # use pars::bytes::{self, PResult};
+/// fn c_str_len(input: &[u8]) -> PResult<usize, &[u8]> {
+///     try_many_until(bytes::u8, bytes::verbatim(b"\x00"), |iter| {
+///         let count = iter.count();
+///         // disallow empty strings
+///         if count == 0 {
+///             Err(ErrorKind::InvalidInput)
+///         } else {
+///             Ok(count)
+///         }
+///     }).map(|(len, _)| len) // we only want the length
+///         .parse(input)
+/// }
+///
+/// assert!(c_str_len.parse(b"hello\x00world") == Ok(Success(5, b"world")));
+/// assert!(c_str_len.parse(b"\x00").is_err());
+/// assert!(c_str_len.parse(b"hello").is_err());
+/// ```
 #[inline]
 pub const fn try_many_until<P, Q, F, R, S, I>(
     parser: P,
@@ -2246,6 +2325,40 @@ where
     }
 }
 
+/// Creates a parser that is repeated until a sentinel is parsed.
+///
+/// [`collect_many_until`] produces a parser that will apply `parser` repeatedly
+/// until `sentinel_parser` succeeds. That is, `sentinel_parser` is applied; if it
+/// fails, `parser` is applied before trying `sentinel_parser` again. If
+/// `sentinel_parser` succeeds, parsing is complete.
+///
+/// The values produced by `parser` are collected using the [`FromIterator`] trait
+/// implementation for the new parser's parsed result type, which is usually
+/// deduced. This value together with the parsed value from `sentinel_parser` as a
+/// 2-tuple become the parsed value for the overall new parser. If `parser` returns
+/// a parsing error at any point, a parsing error is returned from the overall new
+/// parser.
+///
+/// Note that the returned new parser does not allocate unless the
+/// [`FromIterator`] implementation allocates.
+///
+/// See also [`Parse::collect_many_until`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::collect_many_until;
+/// # use pars::bytes::{self, PResult};
+/// fn c_str(input: &[u8]) -> PResult<Vec<u8>, &[u8]> {
+///     collect_many_until(bytes::u8, bytes::verbatim(b"\x00"))
+///         .map(|(s, _)| s)
+///         .parse(input)
+/// }
+///
+/// assert!(c_str.parse(b"hello\x00world") == Ok(Success(Vec::from(b"hello"), b"world")));
+/// assert!(c_str.parse(b"\x00") == Ok(Success(Vec::new(), b"")));
+/// assert!(c_str.parse(b"hello").is_err());
+/// ```
 #[inline]
 pub const fn collect_many_until<P, Q, C, I>(
     parser: P,
