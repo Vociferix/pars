@@ -3204,7 +3204,7 @@ struct TryIntoParser<P, R, E, I>(P, PhantomData<fn() -> (R, E, I)>)
 where
     P: Parse<I>,
     I: Input,
-    P::Parsed: core::convert::TryInto<R>,
+    P::Parsed: TryInto<R>,
     P::Error: Into<E>,
     E: Error<I>;
 
@@ -3212,7 +3212,7 @@ impl<P, R, E, I> Parse<I> for TryIntoParser<P, R, E, I>
 where
     P: Parse<I>,
     I: Input,
-    P::Parsed: core::convert::TryInto<R>,
+    P::Parsed: TryInto<R>,
     P::Error: Into<E>,
     E: Error<I>,
 {
@@ -3234,17 +3234,16 @@ where
     }
 }
 
-/// Creates a parser whose parsed result is converted via [`TryInto`](core::convert::TryInto).
+/// Creates a parser whose parsed result is converted via [`TryInto`].
 ///
 /// If `parser` parses successfully, its result value is converted to `R` using the
-/// [`TryInto<R>`](core::convert::TryInto) trait. If [`TryInto`](core::convert::TryInto)
-/// fails, a parsing error is returned by calling [`E::invalid_input`](Error::invalid_input).
-/// If `parser` returns a parsing error, that error is converted to `E` using the [`Into<E>`]
-/// trait.
+/// [`TryInto<R>`] trait. If [`TryInto`] fails, a parsing error is returned by
+/// calling [`E::invalid_input`](Error::invalid_input). If `parser` returns a parsing
+/// error, that error is converted to `E` using the [`Into<E>`] trait.
 ///
-/// Note that the parsing error is not converted using [`TryInto`](core::convert::TryInto),
-/// but rather the infallible [`Into`] trait. Only the successfully parsed result converts
-/// via [`TryInto`](core::convert::TryInto).
+/// Note that the parsing error is not converted using [`TryInto`], but rather the
+/// infallible [`Into`] trait. Only the successfully parsed result converts via
+/// [`TryInto`].
 ///
 /// See also [`Parse::res_try_into`].
 ///
@@ -3287,18 +3286,18 @@ pub const fn res_try_into<P, R, E, I>(parser: P) -> impl Parse<I, Parsed = R, Er
 where
     P: Parse<I>,
     I: Input,
-    P::Parsed: core::convert::TryInto<R>,
+    P::Parsed: TryInto<R>,
     P::Error: Into<E>,
     E: Error<I>,
 {
     TryIntoParser(parser, PhantomData)
 }
 
-/// Creates a parser whose parsed result is converted via [`TryInto`](core::convert::TryInto).
+/// Creates a parser whose parsed result is converted via [`TryInto`].
 ///
 /// If `parser` parses successfully, its result value is converted to `R` using the
-/// [`TryInto<R>`](core::convert::TryInto) trait. If [`TryInto`](core::convert::TryInto)
-/// fails, a parsing error is returned by calling [`E::invalid_input`](Error::invalid_input).
+/// [`TryInto<R>`] trait. If [`TryInto`] fails, a parsing error is returned by calling
+/// [`E::invalid_input`](Error::invalid_input).
 ///
 /// See also [`Parse::ok_try_into`].
 ///
@@ -3319,7 +3318,7 @@ pub const fn ok_try_into<P, R, I>(parser: P) -> impl Parse<I, Parsed = R, Error 
 where
     P: Parse<I>,
     I: Input,
-    P::Parsed: core::convert::TryInto<R>,
+    P::Parsed: TryInto<R>,
 {
     TryIntoParser(parser, PhantomData)
 }
