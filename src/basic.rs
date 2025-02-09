@@ -2856,6 +2856,31 @@ where
     }
 }
 
+/// Creates a parser that is repeated a constant number of times.
+///
+/// [`array`](array()) produces a parser that applies `parser` `LEN` times and
+/// places the parsed results in an array. If `parser` returns a parsing error
+/// before parsing `LEN` times, a parsing error is returned from the new parser.
+///
+/// [`array`](array()) is similar to [`repeated`], except that the number of
+/// repetitions is known at compile time and the results are placed in array
+/// rather than being processed via an iterator. Most cases where the number of
+/// repetitions is known at compile time should prefer to use [`array`](array()),
+/// but be aware of the tradeoffs of storing and moving the values on the stack
+/// when `LEN` is large.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::array;
+/// # use pars::bytes::{self, PResult};
+/// fn my_parser(input: &[u8]) -> PResult<[u8; 4], &[u8]> {
+///     array(bytes::u8).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") == Ok(Success([1, 2, 3, 4], b"\x05")));
+/// assert!(my_parser.parse(b"\x01\x02\x03").is_err());
+/// ```
 #[inline]
 pub const fn array<P, I, const LEN: usize>(
     parser: P,
@@ -2867,6 +2892,24 @@ where
     ArrayParser(parser, PhantomData)
 }
 
+/// A parser that succeeds on empty input, and fails otherwise.
+///
+/// [`eof`] only parses successfully when the end of input has been reached.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// fn my_parser(input: &str) -> PResult<(), &str> {
+///     verbatim("hello").then(eof).with(|| ()).parse(input)
+/// }
+///
+/// assert!(my_parser.parse("hello").is_ok());
+/// assert!(my_parser.parse("hello world").is_err());
+/// assert!(my_parser.parse("").is_err());
+/// ```
 pub fn eof<I: Input, E: Error<I>>(input: I) -> PResult<(), I, E> {
     if let Some(_) = input.clone().next() {
         Err(Failure(E::expected_eof(input.clone()), input))
