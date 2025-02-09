@@ -2496,6 +2496,52 @@ where
     }
 }
 
+/// Creates a parser that is repeated a number of times within a range.
+///
+/// [`many`] produces a parser that will apply `parser` repeatedly. The number
+/// of times `parser` will be applied is defined by `range`. For example, if
+/// `range` is `3..=5`, `parser` will be applied at least 3 times, and will be
+/// applied up to 5 times if possible. If `parser` fails before parsing 3 times
+/// (or whatever lower bound applies to `range`, if any), a parsing error is
+/// returned from the new parser. Once the upper bound is met (again, if any)
+/// parsing automatically ends successfully. `parser` returning a parsing error
+/// after meeting the lower bound also ends parsing for the new parser.
+///
+/// The values produced by `parser` are passed to `collect_fn` in the form of
+/// an iterator, [`ManyIter`]. Whever `collect_fn` returns is the parsed value
+/// of the new parser.
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// Also note that [`many`] is a more generalized version of [`many0`],
+/// [`many1`] and [`repeated`]. If `range` is `..`, the returned parser is
+/// equivalent to a [`many0`] parser. If `range` is `1..`, the returned parser
+/// is equivalent to a [`many1`] parser. If `range` is `count..=count`, the
+/// returned parser is equivalent to a [`repeated`] parser with a size of
+/// `count`.
+///
+/// See also [`Parse::many`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::many;
+/// # use pars::bytes::{self, PResult};
+/// fn my_parser(input: &[u8]) -> PResult<u32, &[u8]> {
+///     many(bytes::u8, 2..=4, |iter| {
+///         iter.map(|byte| byte as u32).sum()
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") == Ok(Success(10, b"\x05")));
+/// assert!(my_parser.parse(b"\x01\x02\x03") == Ok(Success(6, b"")));
+/// assert!(my_parser.parse(b"\x01\x02") == Ok(Success(3, b"")));
+/// assert!(my_parser.parse(b"\x01").is_err());
+/// assert!(my_parser.parse(b"").is_err());
+/// ```
 #[inline]
 pub const fn many<P, R, F, O, I>(
     parser: P,
@@ -2576,6 +2622,60 @@ where
     }
 }
 
+/// Creates a parser that is repeated a number of times within a range.
+///
+/// [`try_many`] produces a parser that will apply `parser` repeatedly. The
+/// number of times `parser` will be applied is defined by `range`. For example,
+/// if `range` is `3..=5`, `parser` will be applied at least 3 times, and will
+/// be applied up to 5 times if possible. If `parser` fails before parsing 3
+/// times (or whatever lower bound applies to `range`, if any), a parsing error
+/// is returned from the new parser. Once the upper bound is met (again, if any)
+/// parsing automatically ends successfully. `parser` returning a parsing error
+/// after meeting the lower bound also ends parsing for the new parser.
+///
+/// The values produced by `parser` are passed to `collect_fn` in the form of
+/// an iterator, [`ManyIter`]. If `collect_fn` returns an [`Ok`] value, the
+/// contained value becomes the parsed value of the new parser. If `collect_fn`
+/// returns an [`Err`], that gets returned as a parsing error via [`ErrorSeed`].
+///
+/// Note that the returned new parser does not allocate. Values produced by
+/// the iterator are obtained on demand by applying `parser` each time
+/// [`Iterator::next`] is called. Allocation will only occur if the user
+/// provided function `collect_fn` allocates to produce its result.
+///
+/// Also note that [`try_many`] is a more generalized version of [`try_many0`],
+/// [`try_many1`] and [`try_repeated`]. If `range` is `..`, the returned parser
+/// is equivalent to a [`try_many0`] parser. If `range` is `1..`, the returned
+/// parser is equivalent to a [`try_many1`] parser. If `range` is `count..=count`,
+/// the returned parser is equivalent to a [`try_ repeated`] parser with a size of
+/// `count`.
+///
+/// See also [`Parse::try_many`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::try_many;
+/// # use pars::bytes::{self, PResult};
+/// # use pars::ErrorKind;
+/// fn my_parser(input: &[u8]) -> PResult<u32, &[u8]> {
+///     try_many(bytes::u8, 2..=4, |iter| {
+///         let sum = iter.map(|byte| byte as u32).sum();
+///         // only allow even sums
+///         if sum % 2 == 0 {
+///             Ok(sum)
+///         } else {
+///             Err(ErrorKind::InvalidInput)
+///         }
+///     }).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") == Ok(Success(10, b"\x05")));
+/// assert!(my_parser.parse(b"\x01\x02\x03") == Ok(Success(6, b"")));
+/// assert!(my_parser.parse(b"\x01\x02").is_err());
+/// assert!(my_parser.parse(b"\x01").is_err());
+/// assert!(my_parser.parse(b"").is_err());
+/// ```
 #[inline]
 pub const fn try_many<P, R, F, O, S, I>(
     parser: P,
@@ -2650,6 +2750,49 @@ where
     }
 }
 
+/// Creates a parser that is repeated a number of times within a range.
+///
+/// [`collect_many`] produces a parser that will apply `parser` repeatedly. The
+/// number of times `parser` will be applied is defined by `range`. For example,
+/// if `range` is `3..=5`, `parser` will be applied at least 3 times, and will
+/// be applied up to 5 times if possible. If `parser` fails before parsing 3
+/// times (or whatever lower bound applies to `range`, if any), a parsing error
+/// is returned from the new parser. Once the upper bound is met (again, if any)
+/// parsing automatically ends successfully. `parser` returning a parsing error
+/// after meeting the lower bound also ends parsing for the new parser.
+///
+/// The values produced by `parser` are collected by the [`FromIterator`] trait
+/// implementation on the parsed type of the parser, which is usually deduced.
+///
+/// Note that the returned new parser does not allocate unless the
+/// [`FromIterator`] implementation allocates.
+///
+/// Also note that [`collect_many`] is a more generalized version of
+/// [`collect_many0`], [`collect_many1`] and [`collect_repeated`]. If `range` is
+/// `..`, the returned parser is equivalent to a [`collect_many0`] parser. If
+/// `range` is `1..`, the returned parser is equivalent to a [`collect_many1`]
+/// parser. If `range` is `count..=count`, the returned parser is equivalent to
+/// a [`collect_repeated`] parser with a size of `count`.
+///
+/// See also [`Parse::collect_many`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::collect_many;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::{strict::char_with_prop, prop::Alphabetic};
+///
+/// fn my_parser(input: &str) -> PResult<String, &str> {
+///     collect_many(char_with_prop(Alphabetic), 3..=5)
+///         .parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse("hello world"), Ok(Success(String::from("hello"), " world")));
+/// assert_eq!(my_parser.parse("hey there"), Ok(Success(String::from("hey"), " there")));
+/// assert!(my_parser.parse("hi there").is_err());
+/// assert_eq!(my_parser.parse("goodbye"), Ok(Success(String::from("goodb"), "ye")));
+/// ```
 #[inline]
 pub const fn collect_many<P, R, C, I>(
     parser: P,
