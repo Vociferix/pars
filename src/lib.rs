@@ -809,6 +809,14 @@ pub trait Parse<I: Input>: Sized {
     }
 
     #[inline]
+    fn spanned_into<S>(self) -> impl Parse<I, Parsed = (Self::Parsed, S), Error = Self::Error>
+    where
+        Span<I>: Into<S>,
+    {
+        basic::spanned_into(self)
+    }
+
+    #[inline]
     fn recognize(self) -> impl Parse<I, Parsed = Span<I>, Error = Self::Error> {
         basic::recognize(self)
     }
