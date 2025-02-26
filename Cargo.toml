@@ -12,7 +12,7 @@ icu_properties = { version = "1.5", optional = true }
 pars-macros = { path = "macros" }
 
 [features]
-default = ["alloc"]
+default = ["alloc", "ascii", "bytes", "unicode"]
 alloc = ["ascii?/alloc"]
 ascii = ["dep:ascii"]
 bytes = []
