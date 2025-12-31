@@ -1733,6 +1733,48 @@ pub trait Parse<I: Input> {
         basic::spanned(self)
     }
 
+    /// Creates a parser that also returns a span of the input that was parsed.
+    ///
+    /// [`Parse::spanned_into`] produces a parser that combines the parsed result
+    /// of `self` with a [`Span`] of the input that `self` parsed converted to
+    /// `S` via [`Into`] in a 2-tuple. This allows a parser to provide information
+    /// about where in an input stream a parsed value originated from.
+    ///
+    /// [`Parse::spanned_into`] differs from [`Parse::spanned`] in that the
+    /// produced [`Span`] is converted into another type, `S` by way of [`Into`].
+    /// This is a common enough pattern that [`Parse::spanned_into`] exists to
+    /// simplify usage. For example, a `Span<&str>` can be converted to a `&str`
+    /// that contains just the content of the span.
+    ///
+    /// If the parsed value returned by `self` is not needed, such as a parser
+    /// that returns the unit type, consider using [`Parse::recognize`] instead.
+    /// Note that [`Parse::recognize`] doesn't provide a `recognize_into` variant,
+    /// since the same effect can be accomplished with
+    /// `parser.recognize().ok_into()` in this case.
+    ///
+    /// See also [`basic::spanned_into`].
+    ///
+    /// # Example
+    /// ```
+    /// # use pars::prelude::*;
+    /// # use pars::bytes::{self, PResult};
+    /// fn my_parser(input: &[u8]) -> PResult<(u32, &[u8]), &[u8]> {
+    ///     bytes::be::u32.spanned_into().parse(input)
+    /// }
+    ///
+    /// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") ==
+    ///     Ok(Success((0x01020304, b"\x01\x02\x03\x04"), b"\x05")));
+    /// assert!(my_parser.parse(b"").is_err());
+    /// ```
+    #[inline]
+    fn spanned_into<S>(self) -> impl Parse<I, Parsed = (Self::Parsed, S), Error = Self::Error>
+    where
+        Self: Sized,
+        Span<I>: Into<S>,
+    {
+        basic::spanned_into(self)
+    }
+
     /// Creates a parser that returns a [`Span`] of parsed input.
     ///
     /// [`Parse::recognize`] produces a parser that applies `self` and on success, it

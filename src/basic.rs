@@ -1876,6 +1876,8 @@ where
 /// but be aware of the tradeoffs of storing and moving the values on the stack
 /// when `LEN` is large.
 ///
+/// See also [`Parse::array`].
+///
 /// # Example
 /// ```
 /// # use pars::prelude::*;
@@ -1965,13 +1967,16 @@ where
 /// ```
 /// # use pars::prelude::*;
 /// # use pars::basic::complete;
-/// # use pars::bytes::{self, PResult};
-/// fn my_parser(input: &[u8]) -> PResult<u32, &[u8]> {
-///     complete(bytes::be::u32).parse(input)
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// fn my_parser(input: &str) -> PResult<(), &str> {
+///     complete(verbatim("hello").with(|| ())).parse(input)
 /// }
 ///
-/// assert!(my_parser.parse(b"\x01\x02\x03\x04") == Ok(Success(0x01020304, &[][..])));
-/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05").is_err());
+/// assert_eq!(my_parser.parse("hello"), Ok(Success((), "")));
+/// assert!(my_parser.parse("hello world").is_err());
+/// assert!(my_parser.parse("hi").is_err());
 /// ```
 #[inline]
 pub const fn complete<P, I>(parser: P) -> impl Parse<I, Parsed = P::Parsed, Error = P::Error>
@@ -2044,6 +2049,51 @@ where
     I: Input,
 {
     SpannedParser(parser, PhantomData)
+}
+
+/// Creates a parser that also returns a span of the input that was parsed.
+///
+/// [`spanned_into`] produces a parser that combines the parsed result of
+/// `parser` with a [`Span`] of the input that `parser` parsed converted to
+/// `S` via [`Into`] in a 2-tuple. This allows a parser to provide information
+/// about where in an input stream a parsed value originated from.
+///
+/// [`spanned_into`] differs from [`spanned`] in that the produced [`Span`] is
+/// converted into another type, `S` by way of [`Into`]. This is a common
+/// enough pattern that [`spanned_into`] exists to simplify usage. For example,
+/// a `Span<&str>` can be converted to a `&str` that contains just the content
+/// of the span.
+///
+/// If the parsed value returned by `parser` is not needed, such as a parser
+/// that returns the unit type, consider using [`recognize`] instead. Note that
+/// [`recognize`] doesn't provide a `recognize_into` variant, since the same
+/// effect can be accomplished with `recognize(parser).ok_into()` in this case.
+///
+/// See also [`Parse::spanned_into`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::spanned_into;
+/// # use pars::bytes::{self, PResult};
+/// fn my_parser(input: &[u8]) -> PResult<(u32, &[u8]), &[u8]> {
+///     spanned_into(bytes::be::u32).parse(input)
+/// }
+///
+/// assert!(my_parser.parse(b"\x01\x02\x03\x04\x05") ==
+///     Ok(Success((0x01020304, b"\x01\x02\x03\x04"), b"\x05")));
+/// assert!(my_parser.parse(b"").is_err());
+/// ```
+#[inline]
+pub const fn spanned_into<P, S, I>(
+    parser: P,
+) -> impl Parse<I, Parsed = (P::Parsed, S), Error = P::Error>
+where
+    P: Parse<I>,
+    I: Input,
+    Span<I>: Into<S>,
+{
+    map(spanned(parser), |(res, span)| (res, span.into()))
 }
 
 #[derive(Debug, Clone)]

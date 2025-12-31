@@ -1,3 +1,26 @@
+//! This example implements an arithmetic expression parser.
+//!
+//! When the program is run, there will be a prompt. Enter any
+//! basic arithmetic expression, and the result will be printed.
+//!
+//! Operators:
+//! In the following, `n` and `m` are placeholders for numbers.
+//! * `+n`    - Identity
+//! * `-n`    - Negation
+//! * `n + m` - Addition
+//! * `n - m` - Subtraction
+//! * `n * m` - Multiplication
+//! * `n / m` - Division (integer)
+//! * `n % m` - Remainder
+//!
+//! Operators follow standard precedence rules. Parentheses may
+//! also be used to explicity specify precedence.
+//!
+//! Numbers are signed 64-bit integers. As this is just an
+//! example, there are no overflow checks. An expression or
+//! literal that overflows a 64-bit integer will crash the
+//! program.
+
 use pars::prelude::*;
 use pars::unicode::{
     Error, PResult, UnicodeInput as UInput,
