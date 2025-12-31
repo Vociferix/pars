@@ -6,14 +6,14 @@
 //! can potentially be parsed despite encoding errors or otherwise invalid input.
 
 use super::{
-    prop::{
-        any, not, or, ExtendedPictographic, GraphemeClusterBreak, IndicConjunctBreak, LineBreak,
-    },
     Error, PResult, Property, UnicodeInput,
+    prop::{
+        ExtendedPictographic, GraphemeClusterBreak, IndicConjunctBreak, LineBreak, any, not, or,
+    },
 };
 use crate::{
-    basic::{alt, eof, seq},
     Error as PError, Failure, IntoInput, Parse, Span, Success,
+    basic::{alt, eof, seq},
 };
 use ::core::marker::PhantomData;
 
@@ -112,7 +112,7 @@ where
 }
 
 pub fn line<I: UnicodeInput>(input: I) -> PResult<Span<I>, I> {
-    char.many_until(
+    char.repeated_until(
         alt!(
             eof,
             char_with_prop(LineBreak::MandatoryBreak).with_value(()),
@@ -169,17 +169,17 @@ fn t<I: UnicodeInput>(input: I) -> PResult<(), I> {
 fn hangul_syllable<I: UnicodeInput>(input: I) -> PResult<(), I> {
     alt!(
         seq!(
-            l.many0(|_| ()),
+            l.repeated(.., |_| ()),
             alt!(
-                v.many1(|_| ()),
-                seq!(lv, v.many0(|_| ())).with_value(()),
+                v.repeated(1.., |_| ()),
+                seq!(lv, v.repeated(.., |_| ())).with_value(()),
                 lvt,
             ),
-            t.many0(|_| ())
+            t.repeated(.., |_| ())
         )
         .with_value(()),
-        l.many1(|_| ()),
-        t.many1(|_| ()),
+        l.repeated(1.., |_| ()),
+        t.repeated(1.., |_| ()),
     )
     .parse(input)
 }
@@ -227,11 +227,11 @@ fn xpicto_sequence<I: UnicodeInput>(input: I) -> PResult<(), I> {
         .with_value(())
         .then(
             seq!(
-                extend.many0(|_| ()),
+                extend.repeated(.., |_| ()),
                 zwj,
                 char_with_prop(ExtendedPictographic).with_value(()),
             )
-            .many0(|_| ()),
+            .repeated(.., |_| ()),
         )
         .with_value(())
         .parse(input)
@@ -242,13 +242,13 @@ fn conjunct_cluster<I: UnicodeInput>(input: I) -> PResult<(), I> {
         char_with_prop(IndicConjunctBreak::Consonant).with_value(()),
         seq!(
             char_with_prop(or(IndicConjunctBreak::Extend, IndicConjunctBreak::Linker))
-                .many0(|_| ()),
+                .repeated(.., |_| ()),
             char_with_prop(IndicConjunctBreak::Linker).with_value(()),
             char_with_prop(or(IndicConjunctBreak::Extend, IndicConjunctBreak::Linker))
-                .many0(|_| ()),
+                .repeated(.., |_| ()),
             char_with_prop(IndicConjunctBreak::Consonant).with_value(()),
         )
-        .many1(|_| ())
+        .repeated(1.., |_| ())
     )
     .with_value(())
     .parse(input)
@@ -290,7 +290,12 @@ pub fn grapheme_cluster<I: UnicodeInput>(input: I) -> PResult<Span<I>, I> {
     alt!(
         crlf,
         char_with_prop(GraphemeClusterBreak::Control).with_value(()),
-        seq!(precore.many0(|_| ()), core, postcore.many0(|_| ())).with_value(()),
+        seq!(
+            precore.repeated(.., |_| ()),
+            core,
+            postcore.repeated(.., |_| ())
+        )
+        .with_value(()),
     )
     .recognize()
     .parse(input)

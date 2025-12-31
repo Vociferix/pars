@@ -1,7 +1,7 @@
 use pars::prelude::*;
 use pars::unicode::{
-    strict::{char as uchar, regex},
     Error, PResult, UnicodeInput as UInput,
+    strict::{char as uchar, regex},
 };
 
 fn ws<I: UInput>(input: I) -> PResult<(), I> {
@@ -9,7 +9,7 @@ fn ws<I: UInput>(input: I) -> PResult<(), I> {
     // Alternative without using `regex!`
     uchar
         .verify(|ch: &char| ch.is_whitespace())
-        .many0(|_| ())
+        .repeated(.., |_| ())
     */
     regex!(r"\s*").parse(input)
 }
@@ -30,7 +30,7 @@ fn digit<I: UInput>(input: I) -> PResult<i64, I> {
 }
 
 fn number<I: UInput>(input: I) -> PResult<i64, I> {
-    ws_delim(digit.many1(|iter| -> i64 {
+    ws_delim(digit.repeated(1.., |iter| -> i64 {
         let mut ret = 0i64;
         for d in iter {
             ret = (ret * 10) + d;
@@ -105,7 +105,7 @@ fn unary_expr<I: UInput>(input: I) -> PResult<i64, I> {
 fn term_expr<I: UInput>(input: I) -> PResult<i64, I> {
     unary_expr
         .flat_map(|init: i64| {
-            seq!(alt!(mult, div, modulus), unary_expr).many0(move |iter| {
+            seq!(alt!(mult, div, modulus), unary_expr).repeated(.., move |iter| {
                 let mut ret = init;
                 for (op, val) in iter {
                     ret = op.calc(ret, val);
@@ -119,7 +119,7 @@ fn term_expr<I: UInput>(input: I) -> PResult<i64, I> {
 fn expr<I: UInput>(input: I) -> PResult<i64, I> {
     term_expr
         .flat_map(|init: i64| {
-            seq!(alt!(plus, minus), term_expr).many0(move |iter| {
+            seq!(alt!(plus, minus), term_expr).repeated(.., move |iter| {
                 let mut ret = init;
                 for (op, val) in iter {
                     ret = op.calc(ret, val);

@@ -1,5 +1,5 @@
 use super::{
-    lossy::grapheme_cluster as grapheme_cluster_lossy, lossy::line as line_lossy, UnicodeInput,
+    UnicodeInput, lossy::grapheme_cluster as grapheme_cluster_lossy, lossy::line as line_lossy,
 };
 use crate::{Input, IntoInput, Span, Success};
 

@@ -1,4 +1,4 @@
-use crate::{basic::pop, Error as PError, Failure, Input, IntoInput, Parse, Success};
+use crate::{Error as PError, Failure, Input, IntoInput, Parse, Success, basic::pop};
 use core::marker::PhantomData;
 
 pub use pars_macros::regex_bytes as regex;
@@ -262,11 +262,11 @@ pub fn u8<I: ByteInput>(input: I) -> PResult<core::primitive::u8, I> {
 }
 
 pub fn i8<I: ByteInput>(input: I) -> PResult<core::primitive::i8, I> {
-    u8.map(|b| b as core::primitive::i8).parse(input)
+    u8.map(u8::cast_signed).parse(input)
 }
 
 pub mod be {
-    use super::{u8, ByteInput, Error, ErrorKind, PResult};
+    use super::{ByteInput, Error, ErrorKind, PResult, u8};
     use crate::{Error as PError, Failure, Parse, Success};
 
     pub fn utf16_char<I: ByteInput>(input: I) -> PResult<char, I> {
@@ -416,7 +416,23 @@ pub mod be {
     pub fn u120<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(
-                |[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14]| {
+                |[
+                    b0,
+                    b1,
+                    b2,
+                    b3,
+                    b4,
+                    b5,
+                    b6,
+                    b7,
+                    b8,
+                    b9,
+                    b10,
+                    b11,
+                    b12,
+                    b13,
+                    b14,
+                ]| {
                     core::primitive::u128::from_be_bytes([
                         0, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14,
                     ])
@@ -556,7 +572,23 @@ pub mod be {
     pub fn i120<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(
-                |[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14]| {
+                |[
+                    b0,
+                    b1,
+                    b2,
+                    b3,
+                    b4,
+                    b5,
+                    b6,
+                    b7,
+                    b8,
+                    b9,
+                    b10,
+                    b11,
+                    b12,
+                    b13,
+                    b14,
+                ]| {
                     let s = if b0 < 0x80 { 0 } else { 0xff };
                     core::primitive::i128::from_be_bytes([
                         s, b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14,
@@ -586,7 +618,7 @@ pub mod be {
 }
 
 pub mod le {
-    use super::{u8, ByteInput, Error, ErrorKind, PResult};
+    use super::{ByteInput, Error, ErrorKind, PResult, u8};
     use crate::{Error as PError, Failure, Parse, Success};
 
     pub fn utf16_char<I: ByteInput>(input: I) -> PResult<char, I> {
@@ -736,7 +768,23 @@ pub mod le {
     pub fn u120<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(
-                |[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14]| {
+                |[
+                    b0,
+                    b1,
+                    b2,
+                    b3,
+                    b4,
+                    b5,
+                    b6,
+                    b7,
+                    b8,
+                    b9,
+                    b10,
+                    b11,
+                    b12,
+                    b13,
+                    b14,
+                ]| {
                     core::primitive::u128::from_le_bytes([
                         b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, 0,
                     ])
@@ -876,7 +924,23 @@ pub mod le {
     pub fn i120<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(
-                |[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14]| {
+                |[
+                    b0,
+                    b1,
+                    b2,
+                    b3,
+                    b4,
+                    b5,
+                    b6,
+                    b7,
+                    b8,
+                    b9,
+                    b10,
+                    b11,
+                    b12,
+                    b13,
+                    b14,
+                ]| {
                     let s = if b14 < 0x80 { 0 } else { 0xff };
                     core::primitive::i128::from_le_bytes([
                         b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, s,

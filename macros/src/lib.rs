@@ -145,6 +145,8 @@ pub fn permutation(args: TokenStream) -> TokenStream {
         .map(|idx| Ident::new(&format!("__ParsPermutationP{idx}"), Span::call_site()))
         .collect();
     let ty_params = &ty_params_vec[..];
+    let ty_params_0 = &ty_params_vec[0];
+    let ty_params_n = &ty_params_vec[1..];
 
     let vars_vec: Vec<Ident> = (0..args.len())
         .into_iter()
@@ -217,19 +219,26 @@ pub fn permutation(args: TokenStream) -> TokenStream {
 
     quote! {
         {
-            struct __ParsPermutationParser<#(#ty_params,)* __ParsPermutationInput>(#(#ty_params,)* ::core::marker::PhantomData<__ParsPermutationInput>)
+            struct __ParsPermutationParser<#(#ty_params,)* __ParsPermutationInput>(#(#ty_params,)* ::core::marker::PhantomData<fn() -> __ParsPermutationInput>)
             where
-                #(#ty_params: ::pars::Parse<__ParsPermutationInput>,)*
+                #ty_params_0: ::pars::Parse<__ParsPermutationInput>,
+                #(#ty_params_n: ::pars::Parse<__ParsPermutationInput, Error = <#ty_params_0 as ::pars::Parse<__ParsPermutationInput>>::Error>,)*
                 __ParsPermutationInput: ::pars::Input;
 
             impl<#(#ty_params,)* __ParsPermutationInput> ::pars::Parse<__ParsPermutationInput> for __ParsPermutationParser<#(#ty_params,)* __ParsPermutationInput>
             where
-                #(#ty_params: ::pars::Parse<__ParsPermutationInput>,)*
+                #ty_params_0: ::pars::Parse<__ParsPermutationInput>,
+                #(#ty_params_n: ::pars::Parse<__ParsPermutationInput, Error = <#ty_params_0 as ::pars::Parse<__ParsPermutationInput>>::Error>,)*
                 __ParsPermutationInput: ::pars::Input,
             {
                 type Parsed = (#(<#ty_params as ::pars::Parse<__ParsPermutationInput>>::Parsed,)*);
+                type Error = <#ty_params_0 as ::pars::Parse<__ParsPermutationInput>>::Error;
 
-                fn parse(&self, __pars_permutation_input: __ParsPermutationInput) -> ::pars::PResult<Self::Parsed, __ParsPermutationInput> {
+                fn parse<__ParsPermutationIntoInput>(&self, __pars_permutation_input: __ParsPermutationIntoInput) -> ::pars::PResult<Self::Parsed, __ParsPermutationInput, Self::Error>
+                where
+                    __ParsPermutationIntoInput: ::pars::IntoInput<Input = __ParsPermutationInput>,
+                {
+                    let __pars_permutation_input = ::pars::IntoInput::into_input(__pars_permutation_input);
                     let mut __pars_permutation_parsed = 0usize;
                     let mut __pars_permutation_rem = __pars_permutation_input.clone();
                     let mut __pars_permutation_err = None;

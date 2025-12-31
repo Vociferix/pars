@@ -1,7 +1,7 @@
-use super::{ascii, AsciiChar, AsciiInput, AsciiStr, Error, PResult, Property};
+use super::{AsciiChar, AsciiInput, AsciiStr, Error, PResult, Property, ascii};
 use crate::{
-    basic::{alt, eof},
     Error as PError, Failure, IntoInput, Parse, Span, Success,
+    basic::{alt, eof},
 };
 use core::marker::PhantomData;
 
@@ -100,7 +100,7 @@ where
 }
 
 pub fn line<I: AsciiInput>(input: I) -> PResult<Span<I>, I> {
-    char.many_until(
+    char.repeated_until(
         alt!(
             eof,
             verbatim(ascii!("\r\n")).with_value(()),
