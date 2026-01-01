@@ -1,5 +1,3 @@
-use crate::{Parse, Success};
-
 /// A parsable symbol stream.
 ///
 /// [`Input`] is very similar to [`Iterator`]. The key difference is that a type
@@ -117,10 +115,10 @@ pub trait Input: Clone {
 /// [`&Vec<u8>`](alloc::vec::Vec) implements [`IntoInput`] and will convert
 /// to [`&[u8]`].
 ///
-/// The [`Parse::parse`] function accepts a type implementing [`IntoInput`]
-/// for convenience. So given `let my_input: Vec<u8>;`,
-/// `my_parser.parse(&my_input)` works without needing to explicitly
-/// convert the [`Vec`](alloc::vec::Vec) into a slice.
+/// The [`Parse::parse`](crate::Parse::parse) function accepts a type
+/// implementing [`IntoInput`] for convenience. So given
+/// `let my_input: Vec<u8>;`, `my_parser.parse(&my_input)` works without
+/// needing to explicitly convert the [`Vec`](alloc::vec::Vec) into a slice.
 pub trait IntoInput {
     /// The symbol type of the [`Input`] this type will convert to.
     type Symbol;
@@ -130,23 +128,6 @@ pub trait IntoInput {
 
     /// Convert to an [`Input`] type.
     fn into_input(self) -> Self::Input;
-}
-
-/// Input derived from other input by repeatedly applying a parser.
-///
-/// [`ParsedInput`] consists of an underlying input and a parser.
-/// Each symbol produced by a [`ParsedInput`] is produced by applying
-/// the parser to the inner input. After parsing a symbol, the inner
-/// input becomes the remaining unparsed inner input. The [`ParsedInput`]
-/// ends when parsing a symbol fails.
-#[derive(Debug, Clone)]
-pub struct ParsedInput<P, I>
-where
-    P: Parse<I> + Clone,
-    I: Input,
-{
-    parser: P,
-    input: Option<I>,
 }
 
 impl<T: Copy> Input for &[T] {
@@ -354,59 +335,5 @@ impl<'a> IntoInput for &'a alloc::sync::Arc<crate::ascii::AsciiStr> {
 
     fn into_input(self) -> Self::Input {
         self
-    }
-}
-
-impl<P, I> ParsedInput<P, I>
-where
-    P: Parse<I> + Clone,
-    I: Input,
-{
-    /// Creates a new [`ParsedInput`].
-    ///
-    /// The returned [`ParsedInput`] will produce symbols by repeated
-    /// applying the provided parser over the provided input.
-    pub const fn new(parser: P, input: I) -> Self {
-        Self {
-            parser,
-            input: Some(input),
-        }
-    }
-}
-
-impl<P, I> Input for ParsedInput<P, I>
-where
-    P: Parse<I> + Clone,
-    I: Input,
-{
-    type Symbol = P::Parsed;
-
-    fn next(&mut self) -> Option<Self::Symbol> {
-        let Some(input) = self.input.take() else {
-            return None;
-        };
-        match self.parser.parse(input) {
-            Ok(Success(symb, rem)) => {
-                self.input = Some(rem);
-                Some(symb)
-            }
-            _ => None,
-        }
-    }
-
-    fn pos_eq(&self, other: &Self) -> bool {
-        if let Some(input) = self.input.as_ref() {
-            if let Some(other) = other.input.as_ref() {
-                input.pos_eq(other)
-            } else {
-                false
-            }
-        } else {
-            other.input.is_none()
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        self.input.as_ref().map(I::is_empty).unwrap_or(true)
     }
 }
