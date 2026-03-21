@@ -15,6 +15,9 @@
 //! Most functions that take a parser as a parameter and produce a transformed parser
 //! (A.K.A. combinators) are also available as methods on the [`Parse`] trait.
 
+#[cfg(doc)]
+#[allow(unused)]
+use crate::ParseExt;
 use crate::{
     Error, ErrorSeed, Failure, Input, IntoInput, PResult, PResultExt, Parse, Span, Success,
 };
@@ -303,7 +306,7 @@ where
 ///
 /// If the the mapping operation could fail, use [`try_map`] instead.
 ///
-/// See also [`Parse::map`].
+/// See also [`ParseExt::map`].
 ///
 /// # Example
 /// ```
@@ -368,7 +371,7 @@ where
 ///
 /// If the mapping function cannot fail, use [`map`] instead.
 ///
-/// See also [`Parse::try_map`].
+/// See also [`ParseExt::try_map`].
 ///
 /// # Example
 /// ```
@@ -442,7 +445,7 @@ where
 ///
 /// This combinator is most useful for converting between error types.
 ///
-/// See also [`Parse::map_err`].
+/// See also [`ParseExt::map_err`].
 ///
 /// # Example
 /// ```
@@ -523,7 +526,7 @@ where
 /// Unlike [`map`] or [`map_err`], the mapping function may choose to convert an
 /// [`Ok`] into and [`Err`] or an [`Err`] into an [`Ok`].
 ///
-/// See also [`Parse::map_res`].
+/// See also [`ParseExt::map_res`].
 ///
 /// # Example
 /// ```
@@ -649,7 +652,7 @@ where
 /// `with_fn` is then called to produce the new value. If `parser` fails,
 /// `with_fn` is not called.
 ///
-/// See also [`Parse::with`].
+/// See also [`ParseExt::with`].
 ///
 /// # Example
 /// ```
@@ -722,7 +725,7 @@ where
 /// `with_default(parser)` is equivalent to `with(parser, Default::default)`
 /// (see [`with`]).
 ///
-/// See also [`Parse::with_default`].
+/// See also [`ParseExt::with_default`].
 ///
 /// # Example
 /// ```
@@ -780,7 +783,7 @@ where
 /// If `parser` parses successfully, its returned value is immediately dropped.
 /// `value` is is cloned to replace the returned value.
 ///
-/// See also [`Parse::with_value`].
+/// See also [`ParseExt::with_value`].
 ///
 /// # Example
 /// ```
@@ -850,7 +853,7 @@ where
 /// Generally, this combinator is useful for building a parser that should
 /// parse differently depending on information earlier in the input stream.
 ///
-/// See also [`Parse::flat_map`].
+/// See also [`ParseExt::flat_map`].
 ///
 /// # Example
 /// ```
@@ -927,7 +930,7 @@ where
 /// parser. Otherwise, the error is converted to a parsing error and
 /// returned.
 ///
-/// See also [`Parse::try_flat_map`].
+/// See also [`ParseExt::try_flat_map`].
 ///
 /// # Example
 /// ```
@@ -1090,7 +1093,7 @@ where
 /// If `parser` fails to parse, `value` is cloned and returned as a success
 /// value. The new parser will never return a parsing error.
 ///
-/// See also [`Parse::or_value`]
+/// See also [`ParseExt::or_value`]
 ///
 /// # Example
 /// ```
@@ -1147,7 +1150,7 @@ where
 /// [`Default::default`] instead of returning the error. The new parser
 /// will never return a parsing error.
 ///
-/// See also [`Parse::or_default`].
+/// See also [`ParseExt::or_default`].
 ///
 /// # Example
 /// ```
@@ -1205,7 +1208,7 @@ where
 /// is returned as a success value. The new parser will never return a
 /// parsing error.
 ///
-/// See also [`Parse::or_else`]
+/// See also [`ParseExt::or_else`]
 ///
 /// # Example
 /// ```
@@ -1319,7 +1322,7 @@ where
 /// [`Iterator::next`] is called. Allocation will only occur if the user
 /// provided function `collect_fn` allocates to produce its result.
 ///
-/// See also [`Parse::repeated_until`].
+/// See also [`ParseExt::repeated_until`].
 ///
 /// # Example
 /// ```
@@ -1427,7 +1430,7 @@ where
 /// [`Iterator::next`] is called. Allocation will only occur if the user
 /// provided function `collect_fn` allocates to produce its result.
 ///
-/// See also [`Parse::try_repeated_until`].
+/// See also [`ParseExt::try_repeated_until`].
 ///
 /// # Example
 /// ```
@@ -1485,7 +1488,7 @@ where
 /// Note that the returned new parser does not allocate unless the
 /// [`FromIterator`] implementation allocates.
 ///
-/// See also [`Parse::collect_repeated_until`].
+/// See also [`ParseExt::collect_repeated_until`].
 ///
 /// # Example
 /// ```
@@ -1607,7 +1610,7 @@ where
 /// [`Iterator::next`] is called. Allocation will only occur if the user
 /// provided function `collect_fn` allocates to produce its result.
 ///
-/// See also [`Parse::repeated`].
+/// See also [`ParseExt::repeated`].
 ///
 /// # Example
 /// ```
@@ -1728,7 +1731,7 @@ where
 /// [`Iterator::next`] is called. Allocation will only occur if the user
 /// provided function `collect_fn` allocates to produce its result.
 ///
-/// See also [`Parse::try_repeated`].
+/// See also [`ParseExt::try_repeated`].
 ///
 /// # Example
 /// ```
@@ -1787,7 +1790,7 @@ where
 /// Note that the returned new parser does not allocate unless the
 /// [`FromIterator`] implementation allocates.
 ///
-/// See also [`Parse::collect_repeated`].
+/// See also [`ParseExt::collect_repeated`].
 ///
 /// # Example
 /// ```
@@ -1878,7 +1881,7 @@ where
 /// but be aware of the tradeoffs of storing and moving the values on the stack
 /// when `LEN` is large.
 ///
-/// See also [`Parse::array`].
+/// See also [`ParseExt::array`].
 ///
 /// # Example
 /// ```
@@ -1964,7 +1967,7 @@ where
 /// all input was consumed. If there is still input remaining, an error is returned
 /// via [`Error::expected_eof`].
 ///
-/// See also [`Parse::complete`].
+/// See also [`ParseExt::complete`].
 ///
 /// # Example
 /// ```
@@ -2024,7 +2027,7 @@ where
 /// If only the [`Span`] is needed and the parsed value can be discarded, [`recognize`] can
 /// also be used instead.
 ///
-/// See also [`Parse::spanned`].
+/// See also [`ParseExt::spanned`].
 ///
 /// # Example
 /// ```
@@ -2072,7 +2075,7 @@ where
 /// [`recognize`] doesn't provide a `recognize_into` variant, since the same
 /// effect can be accomplished with `recognize(parser).ok_into()` in this case.
 ///
-/// See also [`Parse::spanned_into`].
+/// See also [`ParseExt::spanned_into`].
 ///
 /// # Example
 /// ```
@@ -2132,7 +2135,7 @@ where
 /// [`recognize`] is similar to [`spanned`], except that the parsed value returned by
 /// `parser` is discarded.
 ///
-/// See also [`Parse::recognize`].
+/// See also [`ParseExt::recognize`].
 ///
 /// # Example
 /// ```
@@ -2193,7 +2196,7 @@ where
 /// If `condition` is `false`, the parser succeeds, but returns [`None`] as the
 /// parsed value.
 ///
-/// See also [`Parse::cond`].
+/// See also [`ParseExt::cond`].
 ///
 /// # Example
 /// ```
@@ -2256,7 +2259,7 @@ where
 /// value to `verify_fn`. If `verify_fn` returns `true`, the parser returns the parsed value.
 /// If `verify_fn` returns `false`, the parser returns an error via [`Error::invalid_input`].
 ///
-/// See also [`Parse::verify`].
+/// See also [`ParseExt::verify`].
 ///
 /// # Example
 /// ```
@@ -2315,7 +2318,7 @@ where
 /// error via [`Error::invalid_input`]. If `parser` fails, the new parser returns
 /// a success.
 ///
-/// See also [`Parse::not`].
+/// See also [`ParseExt::not`].
 ///
 /// # Example
 /// ```
@@ -2370,7 +2373,7 @@ where
 /// returns the parsed value wrapped in [`Some`]. On failure, the new parser still
 /// succeeds but returns [`None`] without consuming any input.
 ///
-/// See also [`Parse::opt`].
+/// See also [`ParseExt::opt`].
 ///
 /// # Example
 /// ```
@@ -2425,7 +2428,7 @@ where
 /// the parsed value returned by `parser` and the entire input that was passed to the parser.
 /// On failure, the new parser forwards the error unmodified.
 ///
-/// See also [`Parse::peek`].
+/// See also [`ParseExt::peek`].
 ///
 /// # Example
 /// ```
@@ -2525,7 +2528,7 @@ where
 /// implement [`Parse`], so [`by_ref`] can by used to convert a reference to
 /// a parser into a parser.
 ///
-/// See also [`Parse::by_ref`].
+/// See also [`ParseExt::by_ref`].
 ///
 /// # Example
 /// ```
@@ -3131,7 +3134,7 @@ where
 /// [`Iterator::next`] is called. Allocation will only occur if the user provided
 /// `collect_fn` allocates when called.
 ///
-/// See also [`Parse::try_separated`].
+/// See also [`ParseExt::try_separated`].
 ///
 /// # Example
 /// ```
@@ -3212,7 +3215,7 @@ where
 /// [`Iterator::next`] is called. Allocation will only occur if the user provided
 /// `collect_fn` allocates when called.
 ///
-/// See also [`Parse::separated`].
+/// See also [`ParseExt::separated`].
 ///
 /// # Example
 /// ```
@@ -3286,7 +3289,7 @@ where
 /// on the, typically inferred, parsed value type of the new parser. The values
 /// produced by `separator` are discarded.
 ///
-/// See also [`Parse::collect_separated`].
+/// See also [`ParseExt::collect_separated`].
 ///
 /// # Example
 /// ```
@@ -3367,7 +3370,7 @@ where
 /// corresponding error is returned from the new parser. When `first`
 /// fails, `second` is not applied.
 ///
-/// See also [`Parse::then`].
+/// See also [`ParseExt::then`].
 ///
 /// # Example
 /// ```
@@ -3438,7 +3441,7 @@ where
 /// is returned by the new parser. If both fail, the error returned by
 /// `second` is returned.
 ///
-/// See also [`Parse::or`].
+/// See also [`ParseExt::or`].
 ///
 /// # Example
 /// ```
@@ -3506,7 +3509,7 @@ where
 /// [`Into<R>`] trait. If `parser` fails, the returned parsing error is converted to
 /// `E` using the [`Into<E>`] trait.
 ///
-/// See also [`Parse::res_into`].
+/// See also [`ParseExt::res_into`].
 ///
 /// # Example
 /// ```
@@ -3557,7 +3560,7 @@ where
 /// If `parser` parses successfully, its result value is converted to `R` using the
 /// [`Into<R>`] trait.
 ///
-/// See also [`Parse::ok_into`].
+/// See also [`ParseExt::ok_into`].
 ///
 /// # Example
 /// ```
@@ -3585,7 +3588,7 @@ where
 /// If `parser` fails to parse, the returned parsing error is converted to
 /// `E` using the [`Into<E>`] trait.
 ///
-/// See also [`Parse::err_into`].
+/// See also [`ParseExt::err_into`].
 ///
 /// # Example
 /// ```
@@ -3674,7 +3677,7 @@ where
 /// infallible [`Into`] trait. Only the successfully parsed result converts via
 /// [`TryInto`].
 ///
-/// See also [`Parse::res_try_into`].
+/// See also [`ParseExt::res_try_into`].
 ///
 /// # Example
 /// ```
@@ -3728,7 +3731,7 @@ where
 /// [`TryInto<R>`] trait. If [`TryInto`] fails, a parsing error is returned by calling
 /// [`Error::invalid_input`].
 ///
-/// See also [`Parse::ok_try_into`].
+/// See also [`ParseExt::ok_try_into`].
 ///
 /// # Example
 /// ```

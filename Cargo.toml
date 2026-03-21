@@ -10,6 +10,7 @@ rustdoc-args = ["--cfg", "docsrs"]
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
 ascii = { version = "1.1", default-features = false, optional = true }
+c0nst = "0.2.1"
 icu_properties = { version = "2.0", optional = true }
 pars-macros = { path = "macros" }
 
@@ -19,6 +20,7 @@ alloc = ["ascii?/alloc"]
 ascii = ["dep:ascii"]
 bytes = []
 unicode = ["dep:icu_properties"]
+nightly = ["c0nst/nightly"]
 
 [[example]]
 name = "arithmetic"
