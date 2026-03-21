@@ -72,3 +72,34 @@ impl<'a, T: Copy> From<Span<&'a [T]>> for &'a [T] {
         &span.start()[..(span.start().len() - span.end().len())]
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn str_span() {
+        let input = "hello world";
+        let start = &input[3..];
+        let end = &input[9..];
+
+        let mut span = Span::new(start, end);
+
+        assert_eq!(*span.start(), "lo world");
+        assert_eq!(*span.end(), "ld");
+        assert!(!span.is_empty());
+
+        let spanned: &str = span.clone().into();
+        assert_eq!(spanned, "lo wor");
+
+        assert_eq!(Input::next(&mut span), Some('l'));
+        assert_eq!(Input::next(&mut span), Some('o'));
+        assert_eq!(Input::next(&mut span), Some(' '));
+        assert_eq!(Input::next(&mut span), Some('w'));
+        assert_eq!(Input::next(&mut span), Some('o'));
+        assert_eq!(Input::next(&mut span), Some('r'));
+        assert_eq!(Input::next(&mut span), None);
+
+        assert!(Span::new(start, start).is_empty());
+    }
+}

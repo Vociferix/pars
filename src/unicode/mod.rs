@@ -352,7 +352,7 @@ impl AsU8 for u8 {
 
 impl AsU8 for i8 {
     fn as_u8(self) -> u8 {
-        self as u8
+        self.cast_unsigned()
     }
 }
 
@@ -368,7 +368,7 @@ impl AsU16 for u16 {
 
 impl AsU16 for i16 {
     fn as_u16(self) -> u16 {
-        self as u16
+        self.cast_unsigned()
     }
 }
 
@@ -384,7 +384,7 @@ impl AsU32 for u32 {
 
 impl AsU32 for i32 {
     fn as_u32(self) -> u32 {
-        self as u32
+        self.cast_unsigned()
     }
 }
 
@@ -441,11 +441,11 @@ where
         }
         buf[1] = c1;
         len = 2;
-        let c0 = (c0 & 0b0000_0011_1111_1111) as u32;
-        let c1 = (c1 & 0b0000_0011_1111_1111) as u32;
+        let c0 = u32::from(c0 & 0b0000_0011_1111_1111);
+        let c1 = u32::from(c1 & 0b0000_0011_1111_1111);
         ((c0 << 10) | c1) + 0x10000
     } else {
-        c0 as u32
+        u32::from(c0)
     };
     if let Some(_) = core::primitive::char::from_u32(ch) {
         Ok(Success(&buf[..len], rem))
@@ -477,11 +477,11 @@ where
         }
         buf[1] = c1;
         len = 2;
-        let c0 = (c0 & 0b0000_0011_1111_1111) as u32;
-        let c1 = (c1 & 0b0000_0011_1111_1111) as u32;
+        let c0 = u32::from(c0 & 0b0000_0011_1111_1111);
+        let c1 = u32::from(c1 & 0b0000_0011_1111_1111);
         ((c0 << 10) | c1) + 0x10000
     } else {
-        c0 as u32
+        u32::from(c0)
     };
     if let Some(_) = core::primitive::char::from_u32(ch) {
         Ok(Success(&buf[..len], rem))
@@ -508,11 +508,11 @@ where
         if (c1 & 0b1111_1100_0000_0000) != 0b1101_1100_0000_0000 {
             return Err(Failure(Error::invalid_utf16(tmp), input));
         }
-        let c0 = (c0 & 0b0000_0011_1111_1111) as u32;
-        let c1 = (c1 & 0b0000_0011_1111_1111) as u32;
+        let c0 = u32::from(c0 & 0b0000_0011_1111_1111);
+        let c1 = u32::from(c1 & 0b0000_0011_1111_1111);
         ((c0 << 10) | c1) + 0x10000
     } else {
-        c0 as u32
+        u32::from(c0)
     };
     if let Some(ch) = core::primitive::char::from_u32(ch) {
         Ok(Success(ch, rem))
@@ -538,11 +538,11 @@ where
         if (c1 & 0b1111_1100_0000_0000) != 0b1101_1100_0000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
-        let c0 = (c0 & 0b0000_0011_1111_1111) as u32;
-        let c1 = (c1 & 0b0000_0011_1111_1111) as u32;
+        let c0 = u32::from(c0 & 0b0000_0011_1111_1111);
+        let c1 = u32::from(c1 & 0b0000_0011_1111_1111);
         ((c0 << 10) | c1) + 0x10000
     } else {
-        c0 as u32
+        u32::from(c0)
     };
     if let Some(ch) = core::primitive::char::from_u32(ch) {
         Ok(Success(ch, rem))
@@ -561,7 +561,7 @@ where
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
-    if let Some(_) = char::from_u32(b0 as u32) {
+    if let Some(_) = char::from_u32(b0.into()) {
         buf[0] = b0;
         Ok(Success(unsafe { core::mem::transmute(&buf[..1]) }, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
@@ -574,8 +574,8 @@ where
         }
         buf[0] = b0;
         buf[1] = b1;
-        let b0 = (b0 as u32) & 0b0001_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0001_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
         let ch = (b0 << 6) | b1;
         if let Some(_) = char::from_u32(ch) {
             Ok(Success(unsafe { core::mem::transmute(&buf[..2]) }, rem))
@@ -600,9 +600,9 @@ where
         buf[0] = b0;
         buf[1] = b1;
         buf[2] = b2;
-        let b0 = (b0 as u32) & 0b0000_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
         let ch = (b0 << 12) | (b1 << 6) | b2;
         if let Some(_) = char::from_u32(ch) {
             Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem))
@@ -635,10 +635,10 @@ where
         buf[1] = b1;
         buf[2] = b2;
         buf[3] = b3;
-        let b0 = (b0 as u32) & 0b0000_0111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
-        let b3 = (b3 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_0111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
+        let b3 = u32::from(b3) & 0b0011_1111;
         let ch = (b0 << 18) | (b1 << 12) | (b2 << 6) | b3;
         if let Some(_) = char::from_u32(ch) {
             Ok(Success(unsafe { core::mem::transmute(&buf[..4]) }, rem))
@@ -660,7 +660,7 @@ where
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
-    if let Some(_) = char::from_u32(b0 as u32) {
+    if let Some(_) = char::from_u32(b0.into()) {
         buf[0] = b0;
         Ok(Success(unsafe { core::mem::transmute(&buf[..1]) }, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
@@ -679,8 +679,8 @@ where
         }
         buf[0] = b0;
         buf[1] = b1;
-        let b0 = (b0 as u32) & 0b0001_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0001_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
         let ch = (b0 << 6) | b1;
         if let Some(_) = char::from_u32(ch) {
             Ok(Success(unsafe { core::mem::transmute(&buf[..2]) }, rem))
@@ -720,9 +720,9 @@ where
         buf[0] = b0;
         buf[1] = b1;
         buf[2] = b2;
-        let b0 = (b0 as u32) & 0b0000_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
         let ch = (b0 << 12) | (b1 << 6) | b2;
         if let Some(_) = char::from_u32(ch) {
             Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem))
@@ -776,10 +776,10 @@ where
         buf[1] = b1;
         buf[2] = b2;
         buf[3] = b3;
-        let b0 = (b0 as u32) & 0b0000_0111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
-        let b3 = (b3 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_0111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
+        let b3 = u32::from(b3) & 0b0011_1111;
         let ch = (b0 << 18) | (b1 << 12) | (b2 << 6) | b3;
         if let Some(_) = char::from_u32(ch) {
             Ok(Success(unsafe { core::mem::transmute(&buf[..4]) }, rem))
@@ -811,7 +811,7 @@ where
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
-    if let Some(ch) = char::from_u32(b0 as u32) {
+    if let Some(ch) = char::from_u32(b0.into()) {
         Ok(Success(ch, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
@@ -821,8 +821,8 @@ where
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
-        let b0 = (b0 as u32) & 0b0001_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0001_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
         let ch = (b0 << 6) | b1;
         if let Some(ch) = char::from_u32(ch) {
             Ok(Success(ch, rem))
@@ -844,9 +844,9 @@ where
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
-        let b0 = (b0 as u32) & 0b0000_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
         let ch = (b0 << 12) | (b1 << 6) | b2;
         if let Some(ch) = char::from_u32(ch) {
             Ok(Success(ch, rem))
@@ -875,10 +875,10 @@ where
         if (b3 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
-        let b0 = (b0 as u32) & 0b0000_0111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
-        let b3 = (b3 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_0111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
+        let b3 = u32::from(b3) & 0b0011_1111;
         let ch = (b0 << 18) | (b1 << 12) | (b2 << 6) | b3;
         if let Some(ch) = char::from_u32(ch) {
             Ok(Success(ch, rem))
@@ -900,7 +900,7 @@ where
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
-    if let Some(ch) = char::from_u32(b0 as u32) {
+    if let Some(ch) = char::from_u32(b0.into()) {
         Ok(Success(ch, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
@@ -910,8 +910,8 @@ where
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
-        let b0 = (b0 as u32) & 0b0001_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0001_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
         let ch = (b0 << 6) | b1;
         if let Some(ch) = char::from_u32(ch) {
             Ok(Success(ch, rem))
@@ -933,9 +933,9 @@ where
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
-        let b0 = (b0 as u32) & 0b0000_1111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_1111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
         let ch = (b0 << 12) | (b1 << 6) | b2;
         if let Some(ch) = char::from_u32(ch) {
             Ok(Success(ch, rem))
@@ -964,10 +964,10 @@ where
         if (b3 & 0b1100_0000) != 0b1000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
-        let b0 = (b0 as u32) & 0b0000_0111;
-        let b1 = (b1 as u32) & 0b0011_1111;
-        let b2 = (b2 as u32) & 0b0011_1111;
-        let b3 = (b3 as u32) & 0b0011_1111;
+        let b0 = u32::from(b0) & 0b0000_0111;
+        let b1 = u32::from(b1) & 0b0011_1111;
+        let b2 = u32::from(b2) & 0b0011_1111;
+        let b3 = u32::from(b3) & 0b0011_1111;
         let ch = (b0 << 18) | (b1 << 12) | (b2 << 6) | b3;
         if let Some(ch) = char::from_u32(ch) {
             Ok(Success(ch, rem))

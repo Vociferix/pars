@@ -202,7 +202,7 @@ impl AsciiSymbol for i16 {
         let Some(ch) = input.next() else {
             return Err(Failure(Error::need_more_input(input), orig_input));
         };
-        let Ok(ch) = (ch as u16).to_ascii_char() else {
+        let Ok(ch) = ch.cast_unsigned().to_ascii_char() else {
             return Err(Failure(
                 Error::non_ascii_char(orig_input.clone()),
                 orig_input,
@@ -219,7 +219,7 @@ impl AsciiSymbol for i16 {
         let Some(ch) = input.next() else {
             return Err(Failure(Error::need_more_input(input), orig_input));
         };
-        let Ok(ch) = (ch as u16).to_ascii_char() else {
+        let Ok(ch) = ch.cast_unsigned().to_ascii_char() else {
             return Ok(Success(AsciiChar::SUB, input));
         };
         Ok(Success(ch, input))
@@ -251,7 +251,7 @@ impl AsciiSymbol for i32 {
         let Some(ch) = input.next() else {
             return Err(Failure(Error::need_more_input(input), orig_input));
         };
-        let Ok(ch) = (ch as u32).to_ascii_char() else {
+        let Ok(ch) = ch.cast_unsigned().to_ascii_char() else {
             return Err(Failure(
                 Error::non_ascii_char(orig_input.clone()),
                 orig_input,
@@ -268,7 +268,7 @@ impl AsciiSymbol for i32 {
         let Some(ch) = input.next() else {
             return Err(Failure(Error::need_more_input(input), orig_input));
         };
-        let Ok(ch) = (ch as u32).to_ascii_char() else {
+        let Ok(ch) = ch.cast_unsigned().to_ascii_char() else {
             return Ok(Success(AsciiChar::SUB, input));
         };
         Ok(Success(ch, input))

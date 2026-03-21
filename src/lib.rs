@@ -25,6 +25,7 @@
 //! ```
 //! use pars::prelude::*;
 //! use pars::ErrorKind;
+//! use pars::basic::prefix;
 //! use pars::unicode::{
 //!     strict::{char as uchar, verbatim},
 //!     UnicodeInput as UInput, PResult,
@@ -347,12 +348,9 @@ extern crate self as pars;
 
 /// The `pars` prelude.
 pub mod prelude {
-    pub use super::basic::{
-        alt, constant, delimited, either, eof, error, pair, permutation, pop, prefix, remaining,
-        remaining_len, separated_pair, seq, suffix, take,
-    };
     pub use super::{
-        Error as _, ErrorSeed as _, Failure, Input, IntoInput, PResultExt, Parse, Span, Success,
+        Error as _, ErrorSeed as _, Failure, Input, IntoInput, PResultExt as _, Parse, Span,
+        Success,
     };
 }
 
@@ -383,7 +381,7 @@ pub trait Error<I: Input>: Sized {
 
 /// A parsing error descriptor that can be used to build a parsing error.
 ///
-/// Most types implementing [`ErrorSeed`] are typically an "error kind" `enum. The most
+/// Most types implementing [`ErrorSeed`] are typically an "error kind" `enum`. The most
 /// generic [`ErrorSeed`] is [`ErrorKind`]. However, an [`ErrorSeed`] type can be
 /// anything as long as it can be combined with some [`Input`] to create an [`Error`].
 ///
@@ -964,6 +962,7 @@ pub trait Parse<I: Input> {
     /// ```
     /// # use pars::prelude::*;
     /// # use pars::bytes::{self, PResult};
+    /// # use pars::basic::take;
     /// // First byte is the length of the string, then that many
     /// // more bytes is the string data.
     /// fn pascal_str(input: &[u8]) -> PResult<&[u8], &[u8]> {
@@ -997,7 +996,7 @@ pub trait Parse<I: Input> {
     /// # Example
     /// ```
     /// # use pars::prelude::*;
-    /// # use pars::basic::try_flat_map;
+    /// # use pars::basic::{take, try_flat_map};
     /// # use pars::bytes::{self, PResult, ErrorKind};
     /// fn my_parser(input: &[u8]) -> PResult<&[u8], &[u8]> {
     ///     bytes::u8.try_flat_map(|value| {
@@ -2063,24 +2062,55 @@ mod sealed {
 
 /// Additional convenience methods for [`PResult`].
 pub trait PResultExt: sealed::Sealed {
+    /// The parsed value type of the [`PResult`]
     type Parsed;
+
+    /// The error type of the [`PResult`]
     type Error: Error<Self::Input>;
+
+    /// The input type of the [`PResult`]
     type Input: Input;
 
+    /// Constructs a [`PResult`] containing `Ok(Success(parsed, rem))`
     fn success(parsed: Self::Parsed, rem: Self::Input) -> Self;
 
+    /// Constructs a [`PResult`] containing `Err(Failure(error, rem))`
     fn failure(error: Self::Error, rem: Self::Input) -> Self;
 
+    /// Gets the remaining input contained in the [`PResult`].
+    ///
+    /// Both variants of a [`PResult`] contain remaining input. In the
+    /// case of a parse success, the remaining input is the unconsumed
+    /// input left over. In the case of a failure, the remaining input
+    /// should be all the input that was passed to the parser that
+    /// returned the [`PResult`].
     fn remaining(&self) -> &Self::Input;
 
+    /// Gets the remaining input contained in the [`PResult`].
+    ///
+    /// Both variants of a [`PResult`] contain remaining input. In the
+    /// case of a parse success, the remaining input is the unconsumed
+    /// input left over. In the case of a failure, the remaining input
+    /// should be all the input that was passed to the parser that
+    /// returned the [`PResult`].
     fn remaining_mut(&mut self) -> &mut Self::Input;
 
+    /// Gets the parsed value contained in the [`PResult`], if any.
+    ///
+    /// If the `PResult` represents a successful parse, this will
+    /// return [`Some`]. Otherwise it will return [`None`].
     fn parsed(&self) -> Option<&Self::Parsed>;
 
+    /// Gets the parsed value contained in the [`PResult`], if any.
+    ///
+    /// If the `PResult` represents a successful parse, this will
+    /// return [`Some`]. Otherwise it will return [`None`].
     fn parsed_mut(&mut self) -> Option<&mut Self::Parsed>;
 
+    /// Separates the remaining input from the parse result
     fn extract(self) -> (Result<Self::Parsed, Self::Error>, Self::Input);
 
+    /// Maps the contained parsed value, if any
     fn map_parsed<F, R>(self, map_fn: F) -> PResult<R, Self::Input, Self::Error>
     where
         F: FnOnce(Self::Parsed) -> R;

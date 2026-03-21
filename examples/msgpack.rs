@@ -1,6 +1,7 @@
 //! This example takes a MessagePack byte stream from stdin,
 //! parses it, and prints the parsed value as JSON.
 
+use pars::basic::{alt, prefix};
 use pars::bytes::{self, ByteInput as BInput, ErrorKind, PResult};
 use pars::prelude::*;
 use std::cmp::Ordering;

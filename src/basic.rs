@@ -593,6 +593,7 @@ impl<I: Input, E: Error<I>> Parse<I> for TakeParser<I, E> {
 /// ```
 /// # use pars::prelude::*;
 /// # use pars::unicode::{PResult};
+/// # use pars::basic::take;
 /// fn my_parser(input: &str) -> PResult<&str, &str> {
 ///     take(5).ok_into().parse(input)
 /// }
@@ -850,7 +851,7 @@ where
 /// # Example
 /// ```
 /// # use pars::prelude::*;
-/// # use pars::basic::flat_map;
+/// # use pars::basic::{flat_map, take};
 /// # use pars::bytes::{self, PResult};
 /// // First byte is the length of the string, then that many
 /// // more bytes is the string data.
@@ -927,7 +928,7 @@ where
 /// # Example
 /// ```
 /// # use pars::prelude::*;
-/// # use pars::basic::try_flat_map;
+/// # use pars::basic::{take, try_flat_map};
 /// # use pars::bytes::{self, PResult, ErrorKind};
 /// fn my_parser(input: &[u8]) -> PResult<&[u8], &[u8]> {
 ///     try_flat_map(bytes::u8, |value| {
@@ -1036,6 +1037,7 @@ where
 /// ```
 /// # use pars::prelude::*;
 /// # use pars::unicode::PResult;
+/// # use pars::basic::pop;
 /// fn my_parser(input: &str) -> PResult<char, &str> {
 ///    pop.parse(input)
 /// }
@@ -1909,6 +1911,7 @@ where
 /// ```
 /// # use pars::prelude::*;
 /// # use pars::unicode::PResult;
+/// use pars::basic::eof;
 /// use pars::unicode::strict::verbatim;
 ///
 /// fn my_parser(input: &str) -> PResult<(), &str> {

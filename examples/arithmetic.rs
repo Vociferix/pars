@@ -21,6 +21,7 @@
 //! literal that overflows a 64-bit integer will crash the
 //! program.
 
+use pars::basic::{alt, delimited, prefix, seq, suffix};
 use pars::prelude::*;
 use pars::unicode::{
     Error, PResult, UnicodeInput as UInput,

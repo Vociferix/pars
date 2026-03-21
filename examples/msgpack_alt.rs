@@ -16,6 +16,7 @@
 //!       ./target/release/examples/msgpack_alt
 //! ```
 
+use pars::basic::constant;
 use pars::bytes::{self, ByteInput as BInput, Error, ErrorKind, PResult};
 use pars::prelude::*;
 use std::cmp::Ordering;
