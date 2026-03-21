@@ -257,7 +257,7 @@
 //! The simplest way is to use [`Parse::err_into`].
 //!
 //! ```
-//! # use pars::{bytes, Input, ErrorSeed, Error, Parse, PResult};
+//! # use pars::{bytes, Input, ErrorSeed, Error, Parse, ParseExt, PResult};
 //! # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 //! # struct MyErrorKind(&'static str);
 //! #
@@ -348,9 +348,10 @@ extern crate self as pars;
 
 /// The `pars` prelude.
 pub mod prelude {
+    pub use super::basic::{alt, seq};
     pub use super::{
-        Error as _, ErrorSeed as _, Failure, Input, IntoInput, PResultExt as _, Parse, Span,
-        Success,
+        Error as _, ErrorSeed as _, Failure, Input, IntoInput, PResultExt as _, Parse,
+        ParseExt as _, Span, Success,
     };
 }
 
@@ -389,7 +390,7 @@ pub trait Error<I: Input>: Sized {
 /// combinator) to represent an error with the input stream abstracted away. For
 /// example:
 /// ```
-/// # use pars::{bytes, Parse, ErrorKind};
+/// # use pars::{bytes, Parse, ParseExt, ErrorKind};
 /// # fn my_parser(input: &[u8]) -> pars::PResult<u8, &[u8], bytes::Error<&[u8]>> {
 /// bytes::u8.try_map(|byte| {
 ///     if byte < 0x80 {
@@ -478,7 +479,14 @@ pub trait Parse<I: Input> {
     fn parse<N>(&self, input: N) -> PResult<Self::Parsed, I, Self::Error>
     where
         N: IntoInput<Input = I>;
+}
 
+/// Extension trait providing combinator methods for types implementing [`Parse`].
+///
+/// This trait is typically imported through the [`prelude`]. It provides method
+/// versions of most combinator functions in the [`basic`] module, in the same
+/// style as the [`Iterator`] trait.
+pub trait ParseExt<I: Input>: Parse<I> {
     /// Creates a parser whose parsed result is transformed.
     ///
     /// The provided function, `map_fn`, is applied to the parsed result of
@@ -2050,6 +2058,13 @@ pub trait Parse<I: Input> {
     {
         basic::either(self, other)
     }
+}
+
+impl<P, I> ParseExt<I> for P
+where
+    P: Parse<I>,
+    I: Input,
+{
 }
 
 mod sealed {

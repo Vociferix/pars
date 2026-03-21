@@ -12,7 +12,7 @@ use super::{
     },
 };
 use crate::{
-    Error as PError, Failure, IntoInput, Parse, Span, Success,
+    Error as PError, Failure, IntoInput, Parse, ParseExt, Span, Success,
     basic::{alt, eof, seq},
 };
 use ::core::marker::PhantomData;

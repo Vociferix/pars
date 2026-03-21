@@ -1,5 +1,5 @@
 use super::{AsciiInput, lossy::char as char_lossy, lossy::line as line_lossy};
-use crate::{Input, IntoInput, Parse, Span, Success};
+use crate::{Input, IntoInput, Parse, ParseExt, Span, Success};
 
 /// ASCII input that tracks location information.
 ///

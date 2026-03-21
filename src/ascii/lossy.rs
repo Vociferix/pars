@@ -1,6 +1,6 @@
 use super::{AsciiChar, AsciiInput, AsciiStr, Error, PResult, Property, ascii};
 use crate::{
-    Error as PError, Failure, IntoInput, Parse, Span, Success,
+    Error as PError, Failure, IntoInput, Parse, ParseExt, Span, Success,
     basic::{alt, eof},
 };
 use core::marker::PhantomData;

@@ -8,7 +8,7 @@
 //! modules should generally be preferred. It is also possible
 //! to mix the use of these modules when needed.
 
-use crate::{Error as PError, Failure, Input, IntoInput, Parse, Success, basic::pop};
+use crate::{Error as PError, Failure, Input, IntoInput, Parse, ParseExt, Success, basic::pop};
 use core::marker::PhantomData;
 
 /// Generates a parser that matches a regular expression over [`ByteInput`].
@@ -313,7 +313,7 @@ pub fn i8<I: ByteInput>(input: I) -> PResult<core::primitive::i8, I> {
 
 pub mod be {
     use super::{ByteInput, Error, ErrorKind, PResult, u8};
-    use crate::{Error as PError, Failure, Parse, Success};
+    use crate::{Error as PError, Failure, Parse, ParseExt, Success};
 
     pub fn utf16_char<I: ByteInput>(input: I) -> PResult<char, I> {
         let Success(c0, rem) = u16.parse(input.clone())?;
@@ -663,7 +663,7 @@ pub mod be {
 
 pub mod le {
     use super::{ByteInput, Error, ErrorKind, PResult, u8};
-    use crate::{Error as PError, Failure, Parse, Success};
+    use crate::{Error as PError, Failure, Parse, ParseExt, Success};
 
     pub fn utf16_char<I: ByteInput>(input: I) -> PResult<char, I> {
         let Success(c0, rem) = u16.parse(input.clone())?;

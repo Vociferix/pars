@@ -47,11 +47,8 @@ use core::marker::PhantomData;
 /// # Example
 ///
 /// ```
-/// use pars::{
-///     basic::alt,
-///     unicode::{UnicodeInput as UInput, PResult, strict::verbatim},
-///     Parse, Success,
-/// };
+/// use pars::prelude::*;
+/// use pars::unicode::{UnicodeInput as UInput, PResult, strict::verbatim};
 ///
 /// fn my_parser<I: UInput>(input: I) -> PResult<(), I> {
 ///     // match "a", "b", or "c"
@@ -247,6 +244,7 @@ where
 /// #     },
 /// #     basic::{alt, constant},
 /// #     Parse,
+/// #     ParseExt,
 /// #     Success,
 /// # };
 /// #
