@@ -69,7 +69,7 @@ impl Translator {
             self.0[id] = state;
             return true;
         }
-        return false;
+        false
     }
 }
 
@@ -160,7 +160,6 @@ fn compile_dfa_impl(
 
 fn gen_states(count: usize) -> Vec<syn::Ident> {
     (0..count)
-        .into_iter()
         .map(|state| syn::Ident::new(&format!("State{state}")[..], proc_macro2::Span::call_site()))
         .collect()
 }

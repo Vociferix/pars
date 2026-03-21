@@ -515,6 +515,10 @@ impl GeneralCategory {
     #[allow(non_upper_case_globals)]
     pub const Zs: Self = Self::SpaceSeparator;
 
+    // LINT: Clippy doesn't like the complex type here, but I don't feel
+    //       like there is much value in making a type alias, since the
+    //       type is mostly an implementation detail.
+    #[allow(clippy::type_complexity)]
     pub const L: Or<Self, Or<Self, Or<Self, Or<Self, Self>>>> =
         or(Self::Ll, or(Self::Lu, or(Self::Lt, or(Self::Lm, Self::Lo))));
 
@@ -525,6 +529,10 @@ impl GeneralCategory {
 
     pub const N: Or<Self, Or<Self, Self>> = or(Self::Nd, or(Self::Nl, Self::No));
 
+    // LINT: Clippy doesn't like the complex type here, but I don't feel
+    //       like there is much value in making a type alias, since the
+    //       type is mostly an implementation detail.
+    #[allow(clippy::type_complexity)]
     pub const P: Or<Self, Or<Self, Or<Self, Or<Self, Or<Self, Or<Self, Self>>>>>> = or(
         Self::Pc,
         or(

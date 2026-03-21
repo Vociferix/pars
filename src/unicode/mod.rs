@@ -326,7 +326,10 @@ impl UnicodeSymbol for crate::ascii::AsciiChar {
         match ch {
             Some(ch) => {
                 buf[0] = ch.into();
-                Ok(Success(unsafe { core::mem::transmute(&buf[..1]) }, input))
+                Ok(Success(
+                    unsafe { str::from_utf8_unchecked(&buf[..1]) },
+                    input,
+                ))
             }
             None => Err(Failure(Error::need_more_input(input.clone()), input)),
         }
@@ -340,50 +343,50 @@ impl UnicodeSymbol for crate::ascii::AsciiChar {
     }
 }
 
-trait AsU8 {
-    fn as_u8(self) -> u8;
+trait IntoU8 {
+    fn into_u8(self) -> u8;
 }
 
-impl AsU8 for u8 {
-    fn as_u8(self) -> u8 {
+impl IntoU8 for u8 {
+    fn into_u8(self) -> u8 {
         self
     }
 }
 
-impl AsU8 for i8 {
-    fn as_u8(self) -> u8 {
+impl IntoU8 for i8 {
+    fn into_u8(self) -> u8 {
         self.cast_unsigned()
     }
 }
 
-trait AsU16 {
-    fn as_u16(self) -> u16;
+trait IntoU16 {
+    fn into_u16(self) -> u16;
 }
 
-impl AsU16 for u16 {
-    fn as_u16(self) -> u16 {
+impl IntoU16 for u16 {
+    fn into_u16(self) -> u16 {
         self
     }
 }
 
-impl AsU16 for i16 {
-    fn as_u16(self) -> u16 {
+impl IntoU16 for i16 {
+    fn into_u16(self) -> u16 {
         self.cast_unsigned()
     }
 }
 
-trait AsU32 {
-    fn as_u32(self) -> u32;
+trait IntoU32 {
+    fn into_u32(self) -> u32;
 }
 
-impl AsU32 for u32 {
-    fn as_u32(self) -> u32 {
+impl IntoU32 for u32 {
+    fn into_u32(self) -> u32 {
         self
     }
 }
 
-impl AsU32 for i32 {
-    fn as_u32(self) -> u32 {
+impl IntoU32 for i32 {
+    fn into_u32(self) -> u32 {
         self.cast_unsigned()
     }
 }
@@ -391,10 +394,10 @@ impl AsU32 for i32 {
 fn utf32_char<I>(mut input: I) -> PResult<core::primitive::char, I>
 where
     I: Input,
-    I::Symbol: AsU32,
+    I::Symbol: IntoU32,
 {
     if let Some(ch) = input.next() {
-        if let Some(ch) = core::primitive::char::from_u32(ch.as_u32()) {
+        if let Some(ch) = core::primitive::char::from_u32(ch.into_u32()) {
             Ok(Success(ch, input))
         } else {
             Err(Failure(Error::invalid_code_point(input.clone()), input))
@@ -407,10 +410,10 @@ where
 fn utf32_char_lossy<I>(mut input: I) -> PResult<core::primitive::char, I>
 where
     I: Input,
-    I::Symbol: AsU32,
+    I::Symbol: IntoU32,
 {
     if let Some(ch) = input.next() {
-        if let Some(ch) = core::primitive::char::from_u32(ch.as_u32()) {
+        if let Some(ch) = core::primitive::char::from_u32(ch.into_u32()) {
             Ok(Success(ch, input))
         } else {
             Ok(Success('\u{fffd}', input))
@@ -423,17 +426,17 @@ where
 fn utf16<I>(input: I, buf: &mut [u16]) -> PResult<&[u16], I>
 where
     I: Input,
-    I::Symbol: AsU16,
+    I::Symbol: IntoU16,
 {
     let mut len = 1usize;
     let mut rem = input.clone();
-    let Some(c0) = rem.next().map(AsU16::as_u16) else {
+    let Some(c0) = rem.next().map(IntoU16::into_u16) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
     buf[0] = c0;
     let ch = if (c0 & 0b1111_1100_0000_0000) == 0b1101_1000_0000_0000 {
         let tmp = rem.clone();
-        let Some(c1) = rem.next().map(AsU16::as_u16) else {
+        let Some(c1) = rem.next().map(IntoU16::into_u16) else {
             return Err(Failure(Error::need_more_input(rem), input));
         };
         if (c1 & 0b1111_1100_0000_0000) != 0b1101_1100_0000_0000 {
@@ -447,7 +450,7 @@ where
     } else {
         u32::from(c0)
     };
-    if let Some(_) = core::primitive::char::from_u32(ch) {
+    if core::primitive::char::from_u32(ch).is_some() {
         Ok(Success(&buf[..len], rem))
     } else {
         Err(Failure(Error::invalid_code_point(input.clone()), input))
@@ -457,17 +460,17 @@ where
 fn utf16_lossy<I>(input: I, buf: &mut [u16]) -> PResult<&[u16], I>
 where
     I: Input,
-    I::Symbol: AsU16,
+    I::Symbol: IntoU16,
 {
     let mut len = 1usize;
     let mut rem = input.clone();
-    let Some(c0) = rem.next().map(AsU16::as_u16) else {
+    let Some(c0) = rem.next().map(IntoU16::into_u16) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
     buf[0] = c0;
     let ch = if (c0 & 0b1111_1100_0000_0000) == 0b1101_1000_0000_0000 {
         let tmp = rem.clone();
-        let Some(c1) = rem.next().map(AsU16::as_u16) else {
+        let Some(c1) = rem.next().map(IntoU16::into_u16) else {
             buf[0] = 0xfffd;
             return Ok(Success(&buf[..1], rem));
         };
@@ -483,7 +486,7 @@ where
     } else {
         u32::from(c0)
     };
-    if let Some(_) = core::primitive::char::from_u32(ch) {
+    if core::primitive::char::from_u32(ch).is_some() {
         Ok(Success(&buf[..len], rem))
     } else {
         buf[0] = 0xfffd;
@@ -494,15 +497,15 @@ where
 fn utf16_char<I>(input: I) -> PResult<core::primitive::char, I>
 where
     I: Input,
-    I::Symbol: AsU16,
+    I::Symbol: IntoU16,
 {
     let mut rem = input.clone();
-    let Some(c0) = rem.next().map(AsU16::as_u16) else {
+    let Some(c0) = rem.next().map(IntoU16::into_u16) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
     let ch = if (c0 & 0b1111_1100_0000_0000) == 0b1101_1000_0000_0000 {
         let tmp = rem.clone();
-        let Some(c1) = rem.next().map(AsU16::as_u16) else {
+        let Some(c1) = rem.next().map(IntoU16::into_u16) else {
             return Err(Failure(Error::need_more_input(rem), input));
         };
         if (c1 & 0b1111_1100_0000_0000) != 0b1101_1100_0000_0000 {
@@ -524,15 +527,15 @@ where
 fn utf16_char_lossy<I>(input: I) -> PResult<core::primitive::char, I>
 where
     I: Input,
-    I::Symbol: AsU16,
+    I::Symbol: IntoU16,
 {
     let mut rem = input.clone();
-    let Some(c0) = rem.next().map(AsU16::as_u16) else {
+    let Some(c0) = rem.next().map(IntoU16::into_u16) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
     let ch = if (c0 & 0b1111_1100_0000_0000) == 0b1101_1000_0000_0000 {
         let tmp = rem.clone();
-        let Some(c1) = rem.next().map(AsU16::as_u16) else {
+        let Some(c1) = rem.next().map(IntoU16::into_u16) else {
             return Ok(Success('\u{fffd}', rem));
         };
         if (c1 & 0b1111_1100_0000_0000) != 0b1101_1100_0000_0000 {
@@ -554,19 +557,19 @@ where
 fn utf8<I>(input: I, buf: &mut [u8]) -> PResult<&str, I>
 where
     I: Input,
-    I::Symbol: AsU8,
+    I::Symbol: IntoU8,
 {
     let mut rem = input.clone();
-    let Some(b0) = rem.next().map(AsU8::as_u8) else {
+    let Some(b0) = rem.next().map(IntoU8::into_u8) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
-    if let Some(_) = char::from_u32(b0.into()) {
+    if char::from_u32(b0.into()).is_some() {
         buf[0] = b0;
-        Ok(Success(unsafe { core::mem::transmute(&buf[..1]) }, rem))
+        Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..1]) }, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
@@ -577,21 +580,21 @@ where
         let b0 = u32::from(b0) & 0b0001_1111;
         let b1 = u32::from(b1) & 0b0011_1111;
         let ch = (b0 << 6) | b1;
-        if let Some(_) = char::from_u32(ch) {
-            Ok(Success(unsafe { core::mem::transmute(&buf[..2]) }, rem))
+        if char::from_u32(ch).is_some() {
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..2]) }, rem))
         } else {
             Err(Failure(Error::invalid_utf8(input.clone()), input))
         }
     } else if (b0 & 0b1111_0000) == 0b1110_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
@@ -604,28 +607,28 @@ where
         let b1 = u32::from(b1) & 0b0011_1111;
         let b2 = u32::from(b2) & 0b0011_1111;
         let ch = (b0 << 12) | (b1 << 6) | b2;
-        if let Some(_) = char::from_u32(ch) {
-            Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem))
+        if char::from_u32(ch).is_some() {
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, rem))
         } else {
             Err(Failure(Error::invalid_utf8(input.clone()), input))
         }
     } else if (b0 & 0b1111_1000) == 0b1111_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
         let tmp = rem.clone();
-        let Some(b3) = rem.next().map(AsU8::as_u8) else {
+        let Some(b3) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b3 & 0b1100_0000) != 0b1000_0000 {
@@ -640,8 +643,8 @@ where
         let b2 = u32::from(b2) & 0b0011_1111;
         let b3 = u32::from(b3) & 0b0011_1111;
         let ch = (b0 << 18) | (b1 << 12) | (b2 << 6) | b3;
-        if let Some(_) = char::from_u32(ch) {
-            Ok(Success(unsafe { core::mem::transmute(&buf[..4]) }, rem))
+        if char::from_u32(ch).is_some() {
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..4]) }, rem))
         } else {
             Err(Failure(Error::invalid_utf8(input.clone()), input))
         }
@@ -653,69 +656,69 @@ where
 fn utf8_lossy<I>(input: I, buf: &mut [u8]) -> PResult<&str, I>
 where
     I: Input,
-    I::Symbol: AsU8,
+    I::Symbol: IntoU8,
 {
     let mut rem = input.clone();
-    let Some(b0) = rem.next().map(AsU8::as_u8) else {
+    let Some(b0) = rem.next().map(IntoU8::into_u8) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
-    if let Some(_) = char::from_u32(b0.into()) {
+    if char::from_u32(b0.into()).is_some() {
         buf[0] = b0;
-        Ok(Success(unsafe { core::mem::transmute(&buf[..1]) }, rem))
+        Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..1]) }, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         }
         buf[0] = b0;
         buf[1] = b1;
         let b0 = u32::from(b0) & 0b0001_1111;
         let b1 = u32::from(b1) & 0b0011_1111;
         let ch = (b0 << 6) | b1;
-        if let Some(_) = char::from_u32(ch) {
-            Ok(Success(unsafe { core::mem::transmute(&buf[..2]) }, rem))
+        if char::from_u32(ch).is_some() {
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..2]) }, rem))
         } else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem));
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, rem))
         }
     } else if (b0 & 0b1111_0000) == 0b1110_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         }
         buf[0] = b0;
         buf[1] = b1;
@@ -724,53 +727,53 @@ where
         let b1 = u32::from(b1) & 0b0011_1111;
         let b2 = u32::from(b2) & 0b0011_1111;
         let ch = (b0 << 12) | (b1 << 6) | b2;
-        if let Some(_) = char::from_u32(ch) {
-            Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem))
+        if char::from_u32(ch).is_some() {
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, rem))
         } else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem));
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, rem))
         }
     } else if (b0 & 0b1111_1000) == 0b1111_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         }
         let tmp = rem.clone();
-        let Some(b3) = rem.next().map(AsU8::as_u8) else {
+        let Some(b3) = rem.next().map(IntoU8::into_u8) else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         };
         if (b3 & 0b1100_0000) != 0b1000_0000 {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+            return Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp));
         }
         buf[0] = b0;
         buf[1] = b1;
@@ -781,33 +784,33 @@ where
         let b2 = u32::from(b2) & 0b0011_1111;
         let b3 = u32::from(b3) & 0b0011_1111;
         let ch = (b0 << 18) | (b1 << 12) | (b2 << 6) | b3;
-        if let Some(_) = char::from_u32(ch) {
-            Ok(Success(unsafe { core::mem::transmute(&buf[..4]) }, rem))
+        if char::from_u32(ch).is_some() {
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..4]) }, rem))
         } else {
             buf[0] = 0xef;
             buf[1] = 0xbf;
             buf[2] = 0xbd;
-            return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, rem));
+            Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, rem))
         }
     } else {
         let mut tmp = rem.clone();
-        while rem.next().map(AsU8::as_u8).map(|b| b & 0b1100_0000) == Some(0b1000_0000) {
+        while rem.next().map(IntoU8::into_u8).map(|b| b & 0b1100_0000) == Some(0b1000_0000) {
             tmp = rem.clone();
         }
         buf[0] = 0xef;
         buf[1] = 0xbf;
         buf[2] = 0xbd;
-        return Ok(Success(unsafe { core::mem::transmute(&buf[..3]) }, tmp));
+        Ok(Success(unsafe { str::from_utf8_unchecked(&buf[..3]) }, tmp))
     }
 }
 
 fn utf8_char<I>(input: I) -> PResult<core::primitive::char, I>
 where
     I: Input,
-    I::Symbol: AsU8,
+    I::Symbol: IntoU8,
 {
     let mut rem = input.clone();
-    let Some(b0) = rem.next().map(AsU8::as_u8) else {
+    let Some(b0) = rem.next().map(IntoU8::into_u8) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
@@ -815,7 +818,7 @@ where
         Ok(Success(ch, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
@@ -831,14 +834,14 @@ where
         }
     } else if (b0 & 0b1111_0000) == 0b1110_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
@@ -855,21 +858,21 @@ where
         }
     } else if (b0 & 0b1111_1000) == 0b1111_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         }
         let tmp = rem.clone();
-        let Some(b3) = rem.next().map(AsU8::as_u8) else {
+        let Some(b3) = rem.next().map(IntoU8::into_u8) else {
             return Err(Failure(Error::invalid_utf8(tmp), input));
         };
         if (b3 & 0b1100_0000) != 0b1000_0000 {
@@ -893,10 +896,10 @@ where
 fn utf8_char_lossy<I>(input: I) -> PResult<core::primitive::char, I>
 where
     I: Input,
-    I::Symbol: AsU8,
+    I::Symbol: IntoU8,
 {
     let mut rem = input.clone();
-    let Some(b0) = rem.next().map(AsU8::as_u8) else {
+    let Some(b0) = rem.next().map(IntoU8::into_u8) else {
         return Err(Failure(Error::need_more_input(rem), input));
     };
 
@@ -904,7 +907,7 @@ where
         Ok(Success(ch, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Ok(Success('\u{fffd}', tmp));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
@@ -920,14 +923,14 @@ where
         }
     } else if (b0 & 0b1111_0000) == 0b1110_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Ok(Success('\u{fffd}', tmp));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             return Ok(Success('\u{fffd}', tmp));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
@@ -944,21 +947,21 @@ where
         }
     } else if (b0 & 0b1111_1000) == 0b1111_0000 {
         let tmp = rem.clone();
-        let Some(b1) = rem.next().map(AsU8::as_u8) else {
+        let Some(b1) = rem.next().map(IntoU8::into_u8) else {
             return Ok(Success('\u{fffd}', tmp));
         };
         if (b1 & 0b1100_0000) != 0b1000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
         let tmp = rem.clone();
-        let Some(b2) = rem.next().map(AsU8::as_u8) else {
+        let Some(b2) = rem.next().map(IntoU8::into_u8) else {
             return Ok(Success('\u{fffd}', tmp));
         };
         if (b2 & 0b1100_0000) != 0b1000_0000 {
             return Ok(Success('\u{fffd}', tmp));
         }
         let tmp = rem.clone();
-        let Some(b3) = rem.next().map(AsU8::as_u8) else {
+        let Some(b3) = rem.next().map(IntoU8::into_u8) else {
             return Ok(Success('\u{fffd}', tmp));
         };
         if (b3 & 0b1100_0000) != 0b1000_0000 {
@@ -976,7 +979,7 @@ where
         }
     } else {
         let mut tmp = rem.clone();
-        while rem.next().map(AsU8::as_u8).map(|b| b & 0b1100_0000) == Some(0b1000_0000) {
+        while rem.next().map(IntoU8::into_u8).map(|b| b & 0b1100_0000) == Some(0b1000_0000) {
             tmp = rem.clone();
         }
         Ok(Success('\u{fffd}', tmp))

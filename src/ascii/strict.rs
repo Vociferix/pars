@@ -30,10 +30,10 @@ where
         N: IntoInput<Input = I>,
     {
         let input = input.into_input();
-        let mut expected = self.0.as_ref().chars();
+        let expected = self.0.as_ref().chars();
         let mut rem = input.clone();
 
-        while let Some(ex) = expected.next() {
+        for ex in expected {
             let tmp = rem.clone();
             match rem.parse_char() {
                 Ok(Success(ch, new_rem)) => {

@@ -317,14 +317,14 @@
 //! only available in `std`.
 //!
 //! * `alloc` - Enable usage of the [`alloc`] crate. This enables [`IntoInput`] impls
-//! for types such as [`&Vec<[T]>`](alloc::vec::Vec) and
-//! [`&String`](alloc::string::String). Enabled by default.
+//!   for types such as [`&Vec<[T]>`](alloc::vec::Vec) and
+//!   [`&String`](alloc::string::String). Enabled by default.
 //! * `bytes` - Enable the [`bytes`](./bytes) module, which provides parsers and utilities
-//! for byte streams.
+//!   for byte streams.
 //! * `unicode` - Enable the [`unicode`](./unicode) module, which provides parsers and
-//! utilities for UTF-8, UTF-16, and UTF-32 streams.
+//!   utilities for UTF-8, UTF-16, and UTF-32 streams.
 //! * `ascii` - Enable the [`ascii`](./ascii) module, which provides parsers and utilities
-//! for ASCII character streams.
+//!   for ASCII character streams.
 
 #[cfg(any(doc, feature = "alloc"))]
 extern crate alloc;

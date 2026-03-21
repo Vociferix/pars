@@ -1,3 +1,9 @@
+// LINT: Clippy doesn't like the `PhantomData` types in use
+//       in some of these parsers. Personally, I don't think
+//       it makes them any easier to read to separately define
+//       them separately as a `type` definition.
+#![allow(clippy::type_complexity)]
+
 //! Generic parser and combinator building blocks.
 //!
 //! This module provides the majority of the combinators that will be used to
@@ -1919,7 +1925,7 @@ where
 /// assert!(my_parser.parse("").is_err());
 /// ```
 pub fn eof<I: Input, E: Error<I>>(input: I) -> PResult<(), I, E> {
-    if let Some(_) = input.clone().next() {
+    if input.clone().next().is_some() {
         Err(Failure(E::expected_eof(input.clone()), input))
     } else {
         Ok(Success((), input))
@@ -1946,7 +1952,7 @@ where
     {
         let input = input.into_input();
         let Success(val, rem) = self.0.parse(input.clone())?;
-        if let Some(_) = rem.clone().next() {
+        if rem.clone().next().is_some() {
             Err(Failure(Error::expected_eof(rem), input))
         } else {
             Ok(Success(val, rem))

@@ -44,7 +44,7 @@ pub fn seq(args: TokenStream) -> TokenStream {
     }
     let pairs = seq_pairs(&args[..]);
     let tuple = seq_tuple(0, args.len());
-    let vars = (0..args.len()).into_iter().map(|idx| {
+    let vars = (0..args.len()).map(|idx| {
         let var = Ident::new(&format!("__pars_seq_elem_{idx}"), Span::call_site());
         quote! { #var }
     });
@@ -141,7 +141,6 @@ pub fn permutation(args: TokenStream) -> TokenStream {
     }
 
     let ty_params_vec: Vec<Ident> = (0..args.len())
-        .into_iter()
         .map(|idx| Ident::new(&format!("__ParsPermutationP{idx}"), Span::call_site()))
         .collect();
     let ty_params = &ty_params_vec[..];
@@ -149,13 +148,11 @@ pub fn permutation(args: TokenStream) -> TokenStream {
     let ty_params_n = &ty_params_vec[1..];
 
     let vars_vec: Vec<Ident> = (0..args.len())
-        .into_iter()
         .map(|idx| Ident::new(&format!("__pars_permutation_var_{idx}"), Span::call_site()))
         .collect();
     let vars = &vars_vec[..];
 
     let state_vec: Vec<Ident> = (0..args.len())
-        .into_iter()
         .map(|idx| {
             Ident::new(
                 &format!("__pars_permutation_state_{idx}"),
@@ -272,7 +269,7 @@ pub fn ascii(args: TokenStream) -> TokenStream {
     let Some(tok) = toks.next() else {
         return quote! { ::core::compile_error!("expected one integer, character, string, byte, or byte string literal argument") }.into();
     };
-    if let Some(_) = toks.next() {
+    if toks.next().is_some() {
         return quote! { ::core::compile_error!("expected one integer, character, string, byte, or byte string literal argument") }.into();
     }
 
@@ -367,7 +364,7 @@ pub fn regex_bytes(args: TokenStream) -> TokenStream {
     let Some(tok) = toks.next() else {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     };
-    if let Some(_) = toks.next() {
+    if toks.next().is_some() {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     }
     let regex = match litrs::StringLit::try_from(tok) {
@@ -391,7 +388,7 @@ pub fn regex_ascii_strict(args: TokenStream) -> TokenStream {
     let Some(tok) = toks.next() else {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     };
-    if let Some(_) = toks.next() {
+    if toks.next().is_some() {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     }
     let regex = match litrs::StringLit::try_from(tok) {
@@ -415,7 +412,7 @@ pub fn regex_ascii_lossy(args: TokenStream) -> TokenStream {
     let Some(tok) = toks.next() else {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     };
-    if let Some(_) = toks.next() {
+    if toks.next().is_some() {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     }
     let regex = match litrs::StringLit::try_from(tok) {
@@ -439,7 +436,7 @@ pub fn regex_unicode_strict(args: TokenStream) -> TokenStream {
     let Some(tok) = toks.next() else {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     };
-    if let Some(_) = toks.next() {
+    if toks.next().is_some() {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     }
     let regex = match litrs::StringLit::try_from(tok) {
@@ -463,7 +460,7 @@ pub fn regex_unicode_lossy(args: TokenStream) -> TokenStream {
     let Some(tok) = toks.next() else {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     };
-    if let Some(_) = toks.next() {
+    if toks.next().is_some() {
         return quote! { ::core::compile_error!("expected one string literal argument") }.into();
     }
     let regex = match litrs::StringLit::try_from(tok) {

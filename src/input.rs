@@ -157,7 +157,7 @@ impl<T: Copy> Input for &[T] {
     }
 
     fn is_empty(&self) -> bool {
-        <[T]>::is_empty(*self)
+        <[T]>::is_empty(self)
     }
 }
 
@@ -176,7 +176,7 @@ impl Input for &str {
     }
 
     fn is_empty(&self) -> bool {
-        str::is_empty(*self)
+        str::is_empty(self)
     }
 }
 
@@ -196,7 +196,7 @@ impl Input for &crate::ascii::AsciiStr {
     }
 
     fn is_empty(&self) -> bool {
-        ascii::AsciiStr::is_empty(*self)
+        ascii::AsciiStr::is_empty(self)
     }
 }
 

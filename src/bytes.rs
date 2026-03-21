@@ -335,12 +335,10 @@ pub mod be {
             } else {
                 Err(Failure(Error::invalid_input(input.clone()), input))
             }
+        } else if let Some(ch) = char::from_u32(c0.into()) {
+            Ok(Success(ch, rem))
         } else {
-            if let Some(ch) = char::from_u32(c0.into()) {
-                Ok(Success(ch, rem))
-            } else {
-                Err(Failure(Error::invalid_input(input.clone()), input))
-            }
+            Err(Failure(Error::invalid_input(input.clone()), input))
         }
     }
 
@@ -687,12 +685,10 @@ pub mod le {
             } else {
                 Err(Failure(Error::invalid_input(input.clone()), input))
             }
+        } else if let Some(ch) = char::from_u32(c0.into()) {
+            Ok(Success(ch, rem))
         } else {
-            if let Some(ch) = char::from_u32(c0.into()) {
-                Ok(Success(ch, rem))
-            } else {
-                Err(Failure(Error::invalid_input(input.clone()), input))
-            }
+            Err(Failure(Error::invalid_input(input.clone()), input))
         }
     }
 
