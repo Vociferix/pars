@@ -1836,32 +1836,28 @@ where
     {
         let input = input.into_input();
         let mut rem = input.clone();
-        let mut arr: [core::mem::MaybeUninit<P::Parsed>; LEN] =
-            [const { core::mem::MaybeUninit::uninit() }; LEN];
-        for idx in 0..LEN {
+        let mut arr = arrayvec::ArrayVec::<_, LEN>::new();
+
+        while !arr.is_full() {
             match self.0.parse(rem) {
                 Ok(Success(val, new_rem)) => {
-                    arr[idx].write(val);
+                    // SAFETY: Because the loop checks `!arr.is_full()`, we
+                    //         know there is room to push an element.
+                    unsafe {
+                        arr.push_unchecked(val);
+                    }
+
                     rem = new_rem;
                 }
-                Err(Failure(e, _)) => {
-                    unsafe {
-                        for i in 0..idx {
-                            arr[i].assume_init_drop();
-                        }
-                    }
-                    return Err(Failure(e, input));
-                }
+                Err(Failure(e, _)) => return Err(Failure(e, input)),
             }
         }
-        Ok(Success(
-            unsafe {
-                core::ptr::read(core::mem::transmute(
-                    &arr as *const [core::mem::MaybeUninit<P::Parsed>; LEN],
-                ))
-            },
-            rem,
-        ))
+
+        // SAFETY: The loop condition `!arr.is_full()` must be false to have
+        //         reached here, so the array is fully initialized.
+        let arr = unsafe { arr.into_inner_unchecked() };
+
+        Ok(Success(arr, rem))
     }
 }
 
