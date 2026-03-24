@@ -3,11 +3,16 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
-use syn::{parse_macro_input, Expr, Ident, Index, Token};
+use syn::{parse_macro_input, Arm, Expr, ExprMatch, Ident, Index, Token};
 
 mod regex;
 
 struct Args(Punctuated<Expr, Token![,]>);
+
+struct SelectArgs {
+    move_token: Option<Token![move]>,
+    match_expr: ExprMatch,
+}
 
 impl Parse for Args {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -29,6 +34,22 @@ impl Parse for Args {
             }
         }
         Ok(Self(punc))
+    }
+}
+
+impl Parse for SelectArgs {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let move_token = input.parse::<Token![move]>().ok();
+        let match_expr = input.parse::<ExprMatch>()?;
+
+        if !input.is_empty() {
+            return Err(syn::Error::new(input.span(), "unexpected tokens"));
+        }
+
+        Ok(Self {
+            move_token,
+            match_expr,
+        })
     }
 }
 
@@ -259,6 +280,76 @@ pub fn permutation(args: TokenStream) -> TokenStream {
             __ParsPermutationParser(#(#arg_exprs,)* ::core::marker::PhantomData)
         }
     }.into()
+}
+
+/*
+// Select Example
+select! {
+    match my_parser {
+        0 => sub_parser_0,
+        1 => sub_parser_1,
+        2 => sub_parser_2,
+        _ => default_sub_parser,
+    }
+}
+
+// Desired output of above select! (sans macro sanitation)
+(|input| {
+    match my_parser.parse(input) {
+        Ok(Success(0, rem)) => sub_parser_0.parse(rem),
+        Ok(Success(1, rem)) => sub_parser_1.parse(rem),
+        Ok(Success(2, rem)) => sub_parser_2.parse(rem),
+        Ok(Success(_, rem)) => default_sub_parser.parse(input),
+        Err(failure) => Err(failure)
+    }
+})
+*/
+
+#[proc_macro]
+pub fn select(args: TokenStream) -> TokenStream {
+    let SelectArgs {
+        move_token,
+        match_expr:
+            ExprMatch {
+                attrs,
+                match_token,
+                expr,
+                brace_token: _,
+                arms,
+            },
+    } = parse_macro_input!(args as SelectArgs);
+
+    let arms = arms.into_iter().map(|arm| {
+        let Arm {
+            attrs,
+            pat,
+            guard,
+            fat_arrow_token,
+            body,
+            comma,
+        } = arm;
+
+        let guard = guard.map(|(if_token, body)| quote! { #if_token #body });
+
+        quote! {
+            #(#attrs)*
+            ::core::result::Result::Ok(::pars::Success(#pat, __pars_remaining_input))
+            #guard
+            #fat_arrow_token
+            ::pars::Parse::parse(&(#body), __pars_remaining_input)
+            #comma
+        }
+    });
+
+    quote! {{
+        #move_token |__pars_input| {
+            #(#attrs)*
+            #match_token ::pars::Parse::parse(&(#expr), __pars_input) {
+                #(#arms)*
+                ::core::result::Result::Err(__pars_failure) => ::core::result::Result::Err(__pars_failure),
+            }
+        }
+    }}.into()
 }
 
 #[proc_macro]

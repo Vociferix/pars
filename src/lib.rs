@@ -4,10 +4,11 @@
 
 //! # Parser-combinator library for Rust.
 //! `pars` is a general purpose parser-combinator library, with support for `no_std`.
-//! `pars` is heavily inspired by [`nom`](https://crates.io/crates/nom), but `pars`
-//! aims to generalize more over different kinds of input and provide more
-//! Rust-idiomatic and ergonomic combinators. `pars` also provides direct support for
-//! higher level concepts such as Unicode and regular expressions.
+//! `pars` is heavily inspired by [`nom`](https://crates.io/crates/nom) and
+//! [`winnow`](https://crates.io/crates/winnow), but `pars` aims to generalize more
+//! over different kinds of input and provide more Rust-idiomatic and ergonomic
+//! combinators. `pars` also provides direct support for higher level concepts such
+//! as Unicode and regular expressions.
 //!
 //! # Contents
 //! * [Example](#example) - Jump directly into an example parser implementation
@@ -74,6 +75,10 @@
 //! }
 //! ```
 //!
+//! More complete examples are also available:
+//! * [Arithmetic Interpreter](../src/arithmetic/arithmetic.rs.html)
+//! * [MessagePack Reader](../src/msgpack/msgpack.rs.html)
+//!
 //! # Parser Combinators
 //! Classically, parsers are defined as a grammar that parser generators, such as
 //! `lex` and `yacc`, will transpile to an implementation of a state machine. This
@@ -94,8 +99,8 @@
 //! flexibility, despite not being the most efficient approach. Also note that in
 //! some cases, it is possible define a complex parser without any backtracking with
 //! a little extra effort. See the example
-//! [`msgpack_alt.rs`](https://github.com/Vociferix/pars/blob/master/examples/msgpack_alt.rs)
-//! in the crate repo for an example of a parser with no backtracking.
+//! [`msgpack.rs`](../src/msgpack/msgpack.rs.html) in the crate repo for an example of
+//! a parser with no backtracking.
 //!
 //! # Parser Input
 //! In `pars` a parser is defined as a function that accepts a stream of symbols as a
@@ -349,7 +354,6 @@ extern crate self as pars;
 
 /// The `pars` prelude.
 pub mod prelude {
-    pub use super::basic::{alt, seq};
     pub use super::{
         Error as _, ErrorSeed as _, Failure, Input, IntoInput, PResultExt as _, Parse,
         ParseExt as _, Span, Success,

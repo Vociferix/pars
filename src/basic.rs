@@ -50,6 +50,7 @@ use core::marker::PhantomData;
 /// # Example
 ///
 /// ```
+/// use pars::basic::alt;
 /// use pars::prelude::*;
 /// use pars::unicode::{UnicodeInput as UInput, PResult, strict::verbatim};
 ///
@@ -139,6 +140,54 @@ pub use pars_macros::permutation;
 /// );
 /// ```
 pub use pars_macros::seq;
+
+/// Creates a parser that selects a sub-parser based on the result of another parser.
+///
+/// [`select`] accepts the syntax of a typical Rust `match` expression. The expression
+/// to match on should evaluate to a value implementing [`Parse`]. The `match` arms
+/// should match on the parsed result of that expression and should return a new
+/// parser. The parsers returned by each arm must have the same parsed and error types,
+/// similar to how the arms of a normal `match` expression must return a valid of the
+/// same type. The actual parsers returned by each match arm, however, need not be the
+/// same type. Also like a normal `match` expression, the match patterns must be
+/// exhaustive.
+///
+/// Unlike a normal `match` expression, [`select`] behaves like a closure with respect
+/// to usage of variables in scope. Similar to a closure, the `match` keyword may be
+/// preceded with the `move` keyword in order to capture data by value.
+///
+/// While both [`select`] and [`alt`] implement forms of braching in parsers,
+/// [`select`] differs from [`alt`] in that it does introduce any backtracking
+/// behavior. [`select`] is able to parse its `match` expression and immediately decide
+/// which branch (arm) will be taken before any of the branch parsers are attempted.
+///
+/// [`select`] can also be thought of as an abstraction over [`flat_map`], although
+/// [`select`] does not actually make use of the [`flat_map`] combinator.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::{self, PResult, Error};
+/// # use pars::basic::{select, error, constant};
+/// fn my_parser(input: &[u8]) -> PResult<u64, &[u8]> {
+///     select! {
+///         match bytes::u8 {
+///             0 => constant(|| 0),
+///             1 => bytes::u8.ok_into(),
+///             2 => bytes::le::u16.ok_into(),
+///             3 => bytes::le::u32.ok_into(),
+///             4 => bytes::le::u64,
+///             _ => error(Error::invalid_input),
+///         }
+///     }.parse(input)
+/// }
+///
+/// assert_eq!(my_parser.parse(b"\x00").unwrap().0, 0);
+/// assert_eq!(my_parser.parse(b"\x01\x01").unwrap().0, 1);
+/// assert_eq!(my_parser.parse(b"\x02\x02\x01").unwrap().0, 0x0102);
+/// assert!(my_parser.parse(b"\xff").is_err());
+/// ```
+pub use pars_macros::select;
 
 #[derive(Debug, Clone)]
 struct ErrorParser<F, T, I, E>(F, PhantomData<fn() -> (T, I, E)>)

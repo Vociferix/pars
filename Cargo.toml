@@ -6,6 +6,7 @@ edition = "2024"
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]
 
 [dependencies]
 arrayvec = { version = "0.7.6", default-features = false }
@@ -28,10 +29,6 @@ required-features = ["alloc", "unicode"]
 
 [[example]]
 name = "msgpack"
-required-features = ["alloc", "bytes"]
-
-[[example]]
-name = "msgpack_alt"
 required-features = ["alloc", "bytes"]
 
 [workspace]
