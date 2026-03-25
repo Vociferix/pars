@@ -57,9 +57,9 @@ use core::marker::PhantomData;
 /// fn my_parser<I: UInput>(input: I) -> PResult<(), I> {
 ///     // match "a", "b", or "c"
 ///     alt!(
-///         verbatim("a").with_value(()),
-///         verbatim("b").with_value(()),
-///         verbatim("c").with_value(()),
+///         verbatim("a").ignore(),
+///         verbatim("b").ignore(),
+///         verbatim("c").ignore(),
 ///     )
 ///     .parse(input)
 /// }
@@ -858,6 +858,61 @@ where
     I: Input,
 {
     WithValueParser(parser, value, PhantomData)
+}
+
+#[derive(Debug, Clone)]
+struct IgnoreParser<P, I>(P, PhantomData<fn() -> I>)
+where
+    P: Parse<I>,
+    I: Input;
+
+impl<P, I> Parse<I> for IgnoreParser<P, I>
+where
+    P: Parse<I>,
+    I: Input,
+{
+    type Parsed = ();
+    type Error = P::Error;
+
+    fn parse<N>(&self, input: N) -> PResult<(), I, Self::Error>
+    where
+        N: IntoInput<Input = I>,
+    {
+        match self.0.parse(input) {
+            Ok(Success(_, rem)) => Ok(Success((), rem)),
+            Err(failure) => Err(failure),
+        }
+    }
+}
+
+/// Convert a parser to ignores its returned value and instead returns [`()`].
+///
+/// If `parser` parses successfully, its returned value is immediately dropped
+/// and [`()`] is returned as the parsed value.
+///
+/// See also [`ParseExt::ignore`].
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::basic::ignore;
+/// # use pars::unicode::PResult;
+/// use pars::unicode::strict::verbatim;
+///
+/// fn whitespace(input: &str) -> PResult<(), &str> {
+///     ignore(verbatim(" ")).parse(input)
+/// }
+///
+/// assert_eq!(whitespace.parse(" hello"), Ok(Success((), "hello")));
+/// assert!(whitespace.parse("hello").is_err());
+/// ```
+#[inline]
+pub const fn ignore<P, I>(parser: P) -> impl Parse<I, Parsed = (), Error = P::Error>
+where
+    P: Parse<I>,
+    I: Input,
+{
+    IgnoreParser(parser, PhantomData)
 }
 
 #[derive(Debug, Clone)]

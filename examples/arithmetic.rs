@@ -106,11 +106,11 @@ fn modulus<I: UInput>(input: I) -> PResult<Op, I> {
 }
 
 fn lparen<I: UInput>(input: I) -> PResult<(), I> {
-    ws_delim(uchar.verify(|ch| *ch == '(').with_value(())).parse(input)
+    ws_delim(uchar.verify(|ch| *ch == '(').ignore()).parse(input)
 }
 
 fn rparen<I: UInput>(input: I) -> PResult<(), I> {
-    ws_delim(uchar.verify(|ch| *ch == ')').with_value(())).parse(input)
+    ws_delim(uchar.verify(|ch| *ch == ')').ignore()).parse(input)
 }
 
 fn primary_expr<I: UInput>(input: I) -> PResult<i64, I> {

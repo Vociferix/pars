@@ -961,6 +961,34 @@ c0nst::c0nst! {
             basic::with_value(self, value)
         }
 
+        /// Convert a parser to ignores its returned value and instead returns [`()`].
+        ///
+        /// If `parser` parses successfully, its returned value is immediately dropped
+        /// and [`()`] is returned as the parsed value.
+        ///
+        /// See also [`basic::ignore`].
+        ///
+        /// # Example
+        /// ```
+        /// # use pars::prelude::*;
+        /// # use pars::unicode::PResult;
+        /// use pars::unicode::strict::verbatim;
+        ///
+        /// fn whitespace(input: &str) -> PResult<(), &str> {
+        ///     verbatim(" ").ignore().parse(input)
+        /// }
+        ///
+        /// assert_eq!(whitespace.parse(" hello"), Ok(Success((), "hello")));
+        /// assert!(whitespace.parse("hello").is_err());
+        /// ```
+        #[inline]
+        fn ignore(self) -> impl Parse<I, Parsed = (), Error = Self::Error>
+        where
+            Self: Sized,
+        {
+            basic::ignore(self)
+        }
+
         /// Maps the result of a parser onto a combinator to produce a new parser.
         ///
         /// If `self` parses successfully, the result value is passed into
