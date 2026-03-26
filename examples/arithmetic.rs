@@ -167,7 +167,7 @@ fn main() -> std::io::Result<()> {
     use std::io::Write;
 
     let mut out = std::io::stdout();
-    write!(out, "Enter 'q', 'quit', or 'exit' to exit.\n")?;
+    writeln!(out, "Enter 'q', 'quit', or 'exit' to exit.")?;
     write!(out, "> ")?;
     out.flush()?;
 
@@ -185,9 +185,9 @@ fn main() -> std::io::Result<()> {
         }
 
         if let Ok(value) = eval(&input) {
-            write!(out, "{value}\n")?;
+            writeln!(out, "{value}")?;
         } else {
-            write!(out, "invalid expression\n")?;
+            writeln!(out, "invalid expression")?;
         }
 
         write!(out, "> ")?;

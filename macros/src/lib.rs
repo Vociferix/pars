@@ -9,7 +9,7 @@ mod regex;
 
 struct Args(Punctuated<Expr, Token![,]>);
 
-struct SelectArgs {
+struct FlatMatchArgs {
     move_token: Option<Token![move]>,
     match_expr: ExprMatch,
 }
@@ -37,7 +37,7 @@ impl Parse for Args {
     }
 }
 
-impl Parse for SelectArgs {
+impl Parse for FlatMatchArgs {
     fn parse(input: ParseStream) -> Result<Self> {
         let move_token = input.parse::<Token![move]>().ok();
         let match_expr = input.parse::<ExprMatch>()?;
@@ -282,32 +282,9 @@ pub fn permutation(args: TokenStream) -> TokenStream {
     }.into()
 }
 
-/*
-// Select Example
-select! {
-    match my_parser {
-        0 => sub_parser_0,
-        1 => sub_parser_1,
-        2 => sub_parser_2,
-        _ => default_sub_parser,
-    }
-}
-
-// Desired output of above select! (sans macro sanitation)
-(|input| {
-    match my_parser.parse(input) {
-        Ok(Success(0, rem)) => sub_parser_0.parse(rem),
-        Ok(Success(1, rem)) => sub_parser_1.parse(rem),
-        Ok(Success(2, rem)) => sub_parser_2.parse(rem),
-        Ok(Success(_, rem)) => default_sub_parser.parse(input),
-        Err(failure) => Err(failure)
-    }
-})
-*/
-
 #[proc_macro]
-pub fn select(args: TokenStream) -> TokenStream {
-    let SelectArgs {
+pub fn flat_match(args: TokenStream) -> TokenStream {
+    let FlatMatchArgs {
         move_token,
         match_expr:
             ExprMatch {
@@ -317,7 +294,7 @@ pub fn select(args: TokenStream) -> TokenStream {
                 brace_token: _,
                 arms,
             },
-    } = parse_macro_input!(args as SelectArgs);
+    } = parse_macro_input!(args as FlatMatchArgs);
 
     let arms = arms.into_iter().map(|arm| {
         let Arm {

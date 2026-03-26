@@ -2,18 +2,18 @@
 //! parses it, and prints the parsed value as JSON.
 //!
 //! This is a good example of a parser that doesn't backtrack.
-//! It makes use of the [`select!`] macro to select the correct
+//! It makes use of the [`flat_match!`] macro to select the correct
 //! type parser based on the type code, which prevents the need
 //! to use [`alt!`] or other backtracking alternation.
 
-use pars::basic::{constant, error, select};
+use pars::basic::{constant, error, flat_match};
 use pars::bytes::{self, ByteInput as BInput, Error, ErrorKind, PResult};
 use pars::prelude::*;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 // NOTE: Extension types not supported
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq)]
 enum Object {
     Nil,
     Bool(bool),
@@ -28,11 +28,42 @@ enum Object {
 
 impl Eq for Object {}
 
+impl PartialOrd for Object {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(Ord::cmp(self, other))
+    }
+}
+
 impl Ord for Object {
     fn cmp(&self, other: &Self) -> Ordering {
-        match PartialOrd::partial_cmp(self, other) {
-            Some(ord) => ord,
-            None => Ordering::Equal,
+        match (self, other) {
+            (Self::Nil, Self::Nil) => Ordering::Equal,
+            (Self::Nil, _) => Ordering::Less,
+            (_, Self::Nil) => Ordering::Greater,
+            (Self::Bool(l), Self::Bool(r)) => Ord::cmp(l, r),
+            (Self::Bool(_), _) => Ordering::Less,
+            (_, Self::Bool(_)) => Ordering::Greater,
+            (Self::Int(l), Self::Int(r)) => Ord::cmp(l, r),
+            (Self::Int(_), _) => Ordering::Less,
+            (_, Self::Int(_)) => Ordering::Greater,
+            (Self::UInt(l), Self::UInt(r)) => Ord::cmp(l, r),
+            (Self::UInt(_), _) => Ordering::Less,
+            (_, Self::UInt(_)) => Ordering::Greater,
+            (Self::Float(l), Self::Float(r)) => {
+                PartialOrd::partial_cmp(l, r).unwrap_or(Ordering::Equal)
+            }
+            (Self::Float(_), _) => Ordering::Less,
+            (_, Self::Float(_)) => Ordering::Greater,
+            (Self::String(l), Self::String(r)) => Ord::cmp(l, r),
+            (Self::String(_), _) => Ordering::Less,
+            (_, Self::String(_)) => Ordering::Greater,
+            (Self::Bytes(l), Self::Bytes(r)) => Ord::cmp(l, r),
+            (Self::Bytes(_), _) => Ordering::Less,
+            (_, Self::Bytes(_)) => Ordering::Greater,
+            (Self::Array(l), Self::Array(r)) => Ord::cmp(l, r),
+            (Self::Array(_), _) => Ordering::Less,
+            (_, Self::Array(_)) => Ordering::Greater,
+            (Self::Map(l), Self::Map(r)) => Ord::cmp(l, r),
         }
     }
 }
@@ -268,7 +299,7 @@ fn map32<I: BInput>(input: I) -> PResult<Object, I> {
 }
 
 fn msgpack<I: BInput>(input: I) -> PResult<Object, I> {
-    select! {
+    flat_match! {
         match bytes::u8 {
             prefix @ 0x00..0x80 => pos_fix_int(prefix),
             prefix @ 0xe0..=0xff => neg_fix_int(prefix as i8),
