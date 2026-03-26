@@ -499,7 +499,7 @@ c0nst::c0nst! {
         /// `self` if it parses successfully. The value returned from `map_fn`
         /// is the parsed result of the new parser.
         ///
-        /// If the the mapping operation could fail, use [`Parse::try_map`]
+        /// If the the mapping operation could fail, use [`ParseExt::try_map`]
         /// instead.
         ///
         /// See also [`basic::map`].
@@ -532,7 +532,7 @@ c0nst::c0nst! {
         /// [`Error`] via [`ErrorSeed`]. If an [`Ok`] value is returned, the
         /// contained value becomes the parsed result of the new parser.
         ///
-        /// If the mapping function cannot fail, use [`Parse::map`] instead.
+        /// If the mapping function cannot fail, use [`ParseExt::map`] instead.
         ///
         /// See also [`basic::try_map`].
         ///
@@ -610,7 +610,7 @@ c0nst::c0nst! {
         /// `map_res_fn` then returns a new [`Result`], which will contain either the new
         /// successful parsed value or a new parsing error.
         ///
-        /// Unlike [`Parse::map`] or [`Parse::map_err`], the mapping function may choose to
+        /// Unlike [`ParseExt::map`] or [`ParseExt::map_err`], the mapping function may choose to
         /// convert an [`Ok`] into and [`Err`] or an [`Err`] into an [`Ok`].
         ///
         /// See also [`basic::map_res`].
@@ -902,9 +902,9 @@ c0nst::c0nst! {
         /// calling [`Default::default()`].
         ///
         /// `parser.with_default()` is equivalent to `parser.with(Default::default)`
-        /// (see [`Parse::with`]).
+        /// (see [`ParseExt::with`]).
         ///
-        /// See also [`Parse::with_default`].
+        /// See also [`ParseExt::with_default`].
         ///
         /// # Example
         /// ```
@@ -1155,7 +1155,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated until a sentinel is parsed.
         ///
-        /// [`Parse::repeated_until`] produces a parser that will apply `self` repeatedly
+        /// [`ParseExt::repeated_until`] produces a parser that will apply `self` repeatedly
         /// until `sentinel_parser` succeeds. That is, `sentinel_parser` is applied; if it
         /// fails, `self` is applied before trying `sentinel_parser` again. If
         /// `sentinel_parser` succeeds, parsing is complete.
@@ -1204,7 +1204,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated until a sentinel is parsed.
         ///
-        /// [`Parse::try_repeated_until`] produces a parser that will apply `self` repeatedly
+        /// [`ParseExt::try_repeated_until`] produces a parser that will apply `self` repeatedly
         /// until `sentinel_parser` succeeds. That is, `sentinel_parser` is applied; if it fails,
         /// `self` is applied before trying `sentinel_parser` again. If `sentinel_parser`
         /// succeeds, parsing is complete.
@@ -1262,7 +1262,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated until a sentinel is parsed.
         ///
-        /// [`Parse::collect_repeated_until`] produces a parser that will apply `self`
+        /// [`ParseExt::collect_repeated_until`] produces a parser that will apply `self`
         /// repeatedly until `sentinel_parser` succeeds. That is, `sentinel_parser` is
         /// applied; if it fails, `self` is applied before trying `sentinel_parser` again.
         /// If `sentinel_parser` succeeds, parsing is complete.
@@ -1308,7 +1308,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated a number of times within a range.
         ///
-        /// [`Parse::repeated`] produces a parser that will apply `self` repeatedly. The
+        /// [`ParseExt::repeated`] produces a parser that will apply `self` repeatedly. The
         /// number of times `self` will be applied is defined by `range`. For example, if
         /// `range` is `3..=5`, `self` will be applied at least 3 times, and will be
         /// applied up to 5 times if possible. If `self` fails before parsing 3 times
@@ -1360,7 +1360,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated a number of times within a range.
         ///
-        /// [`Parse::try_repeated`] produces a parser that will apply `self` repeatedly.
+        /// [`ParseExt::try_repeated`] produces a parser that will apply `self` repeatedly.
         /// The number of times `self` will be applied is defined by `range`. For example,
         /// if `range` is `3..=5`, `self` will be applied at least 3 times, and will
         /// be applied up to 5 times if possible. If `self` fails before parsing 3
@@ -1422,7 +1422,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated a number of times within a range.
         ///
-        /// [`Parse::collect_repeated`] produces a parser that will apply `self`
+        /// [`ParseExt::collect_repeated`] produces a parser that will apply `self`
         /// repeatedly. The number of times `self` will be applied is defined by `range`.
         /// For example, if `range` is `3..=5`, `self` will be applied at least 3 times,
         /// and will be applied up to 5 times if possible. If `self` fails before parsing
@@ -1469,14 +1469,14 @@ c0nst::c0nst! {
 
         /// Creates a parser that is repeated a constant number of times.
         ///
-        /// [`Parse::array`] produces a parser that applies `self` `LEN` times and
+        /// [`ParseExt::array`] produces a parser that applies `self` `LEN` times and
         /// places the parsed results in an array. If `self` returns a parsing error
         /// before parsing `LEN` times, a parsing error is returned from the new parser.
         ///
-        /// [`Parse::array`] is similar to [`Parse::repeated`], except that the number of
+        /// [`ParseExt::array`] is similar to [`ParseExt::repeated`], except that the number of
         /// repetitions is known at compile time and the results are placed in array
         /// rather than being processed via an iterator. Most cases where the number of
-        /// repetitions is known at compile time should prefer to use [`Parse::array`],
+        /// repetitions is known at compile time should prefer to use [`ParseExt::array`],
         /// but be aware of the tradeoffs of storing and moving the values on the stack
         /// when `LEN` is large.
         ///
@@ -1503,10 +1503,10 @@ c0nst::c0nst! {
 
         /// Creates a parser that is applied repeatedly while interspersed with a separator.
         ///
-        /// [`Parse::separated`] produces a parser that will apply `self` and `separator`
+        /// [`ParseExt::separated`] produces a parser that will apply `self` and `separator`
         /// repeatedly, alternatiging between the two. The parsing pattern starts with
         /// `parser` and ends with `self`, such as `self separator self`. This is
-        /// distinct from `parser.then(separator).repeated(...)` as [`Parse::separated`]
+        /// distinct from `parser.then(separator).repeated(...)` as [`ParseExt::separated`]
         /// will not parse a trailing separator, and a repeated pair must parse a trailing
         /// separator.
         ///
@@ -1576,11 +1576,11 @@ c0nst::c0nst! {
 
         /// Creates a parser that is applied repeatedly while interspersed with a separator.
         ///
-        /// [`Parse::try_separated`] produces a parser that will apply `self` and
+        /// [`ParseExt::try_separated`] produces a parser that will apply `self` and
         /// `separator` repeatedly, alternatiging between the two. The parsing pattern
         /// starts with `self` and ends with `self`, such as `self separator self`. This is
         /// distinct from `parser.then(separator).try_repeated(...)` as
-        /// [`Parse::try_separated`] will not parse a trailing separator, and a repeated
+        /// [`ParseExt::try_separated`] will not parse a trailing separator, and a repeated
         /// pair must parse a trailing separator.
         ///
         /// The provided `range` determines the minimum and maximum number of repatitions
@@ -1657,11 +1657,11 @@ c0nst::c0nst! {
 
         /// Creates a parser that is applied repeatedly while interspersed with a separator.
         ///
-        /// [`Parse::collect_separated`] produces a parser that will apply `self` and
+        /// [`ParseExt::collect_separated`] produces a parser that will apply `self` and
         /// `separator` repeatedly, alternatiging between the two. The parsing pattern
         /// starts with `self` and ends with `self`, such as `self separator self`. This
         /// is distinct from `parser.then(separator).collect_repeated(...)` as
-        /// [`Parse::collect_separated`] will not parse a trailing separator, and a repeated
+        /// [`ParseExt::collect_separated`] will not parse a trailing separator, and a repeated
         /// pair must parse a trailing separator.
         ///
         /// The provided `range` determines the minimum and maximum number of repatitions
@@ -1715,7 +1715,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that fails if all input is not consumed.
         ///
-        /// [`Parse::complete`] produces a parser that applies `self` and then verifies that
+        /// [`ParseExt::complete`] produces a parser that applies `self` and then verifies that
         /// all input was consumed. If there is still input remaining, an error is returned
         /// via [`Error::expected_eof`].
         ///
@@ -1742,12 +1742,12 @@ c0nst::c0nst! {
 
         /// Creates a parser that returns a [`Span`] of parsed input in addition to the parsed value.
         ///
-        /// [`Parse::spanned`] produces a parser that applies `self`, and on success, it returns the
+        /// [`ParseExt::spanned`] produces a parser that applies `self`, and on success, it returns the
         /// parsed value from `parser` in a tuple with a [`Span`] of the input consumed to produce
         /// the parsed value.
         ///
         /// If only the [`Span`] is needed and the parsed value can be discarded,
-        /// [`Parse::recognize`] can also be used instead.
+        /// [`ParseExt::recognize`] can also be used instead.
         ///
         /// See also [`basic::spanned`].
         ///
@@ -1777,20 +1777,20 @@ c0nst::c0nst! {
 
         /// Creates a parser that also returns a span of the input that was parsed.
         ///
-        /// [`Parse::spanned_into`] produces a parser that combines the parsed result
+        /// [`ParseExt::spanned_into`] produces a parser that combines the parsed result
         /// of `self` with a [`Span`] of the input that `self` parsed converted to
         /// `S` via [`Into`] in a 2-tuple. This allows a parser to provide information
         /// about where in an input stream a parsed value originated from.
         ///
-        /// [`Parse::spanned_into`] differs from [`Parse::spanned`] in that the
+        /// [`ParseExt::spanned_into`] differs from [`ParseExt::spanned`] in that the
         /// produced [`Span`] is converted into another type, `S` by way of [`Into`].
-        /// This is a common enough pattern that [`Parse::spanned_into`] exists to
+        /// This is a common enough pattern that [`ParseExt::spanned_into`] exists to
         /// simplify usage. For example, a `Span<&str>` can be converted to a `&str`
         /// that contains just the content of the span.
         ///
         /// If the parsed value returned by `self` is not needed, such as a parser
-        /// that returns the unit type, consider using [`Parse::recognize`] instead.
-        /// Note that [`Parse::recognize`] doesn't provide a `recognize_into` variant,
+        /// that returns the unit type, consider using [`ParseExt::recognize`] instead.
+        /// Note that [`ParseExt::recognize`] doesn't provide a `recognize_into` variant,
         /// since the same effect can be accomplished with
         /// `parser.recognize().ok_into()` in this case.
         ///
@@ -1819,10 +1819,10 @@ c0nst::c0nst! {
 
         /// Creates a parser that returns a [`Span`] of parsed input.
         ///
-        /// [`Parse::recognize`] produces a parser that applies `self` and on success, it
+        /// [`ParseExt::recognize`] produces a parser that applies `self` and on success, it
         /// returns a [`Span`] of the input consumed by `self`.
         ///
-        /// [`Parse::recognize`] is similar to [`Parse::spanned`], except that the parsed
+        /// [`ParseExt::recognize`] is similar to [`ParseExt::spanned`], except that the parsed
         /// value returned by `self` is discarded.
         ///
         /// See also [`basic::recognize`].
@@ -1852,7 +1852,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that produces a parsed value only if `condition` is `true`.
         ///
-        /// [`Parse::cond`] produces a parser that applies `self` only if `condition` is
+        /// [`ParseExt::cond`] produces a parser that applies `self` only if `condition` is
         /// `true`. On success, the parsed value returned by `self` returned wrapped in
         /// [`Some`]. If `condition` is `false`, the parser succeeds, but returns [`None`]
         /// as the parsed value.
@@ -1885,7 +1885,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that succeeds only if the parsed value passes the given predicate.
         ///
-        /// [`Parse::verify`] produces a parser that applies `self`, and on success, passes the parsed
+        /// [`ParseExt::verify`] produces a parser that applies `self`, and on success, passes the parsed
         /// value to `verify_fn`. If `verify_fn` returns `true`, the parser returns the parsed value.
         /// If `verify_fn` returns `false`, the parser returns an error via [`Error::invalid_input`].
         ///
@@ -1913,7 +1913,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that succeeds only if `self` fails.
         ///
-        /// [`Parse::not`] produces a parser that applies `self`, an on success, it returns
+        /// [`ParseExt::not`] produces a parser that applies `self`, an on success, it returns
         /// an error via [`Error::invalid_input`]. If `self` fails, the new parser returns
         /// a success.
         ///
@@ -1940,7 +1940,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that attempts to parse with `self` if possible.
         ///
-        /// [`Parse::opt`] produces a parser that applies `self`, and on success, the new
+        /// [`ParseExt::opt`] produces a parser that applies `self`, and on success, the new
         /// parser returns the parsed value wrapped in [`Some`]. On failure, the new parser
         /// still succeeds but returns [`None`] without consuming any input.
         ///
@@ -1967,7 +1967,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that parses without consuming input.
         ///
-        /// [`Parse::peek`] produces a parser that applies `self`, and on success, the new parser
+        /// [`ParseExt::peek`] produces a parser that applies `self`, and on success, the new parser
         /// returns the parsed value returned by `self` and the entire input that was passed to
         /// the parser. On failure, the new parser forwards the error unmodified.
         ///
@@ -1993,12 +1993,12 @@ c0nst::c0nst! {
 
         /// Creates a parser out of a reference to another parser.
         ///
-        /// [`Parse::by_ref`] produces a parser that directly applies `self`. The
+        /// [`ParseExt::by_ref`] produces a parser that directly applies `self`. The
         /// produced parser behaves identically to `self` and internally contains a
         /// reference to `self`.
         ///
         /// [`Parse`] is not automatically implemented for references to types that
-        /// implement [`Parse`], so [`Parse::by_ref`] can by used to convert a
+        /// implement [`Parse`], so [`ParseExt::by_ref`] can by used to convert a
         /// reference to a parser into a parser.
         ///
         /// See also [`basic::by_ref`].
@@ -2024,7 +2024,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that applies two parsers in sequence.
         ///
-        /// [`Parse::then`] produces a parser that applies `self` and `other` in that
+        /// [`ParseExt::then`] produces a parser that applies `self` and `other` in that
         /// order. On success, the new parser returns the parsed values returned
         /// by `self` and `other` as a tuple. If either parser fails, the
         /// corresponding error is returned from the new parser. When `self` fails,
@@ -2059,7 +2059,7 @@ c0nst::c0nst! {
 
         /// Creates a parser that attempts to parse with each of two parsers.
         ///
-        /// [`Parse::or`] produces a parser that first attempts to apply `self` and
+        /// [`ParseExt::or`] produces a parser that first attempts to apply `self` and
         /// then applies `other` if `self` fails. If `self` succeeds, the
         /// parsed value `self` returns is returned by the new parser. If `self`
         /// fails and then `other` succeeds, the parsed value returned by `other`

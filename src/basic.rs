@@ -885,10 +885,10 @@ where
     }
 }
 
-/// Convert a parser to ignores its returned value and instead returns [`()`].
+/// Convert a parser to ignores its returned value and instead returns `()`.
 ///
 /// If `parser` parses successfully, its returned value is immediately dropped
-/// and [`()`] is returned as the parsed value.
+/// and `()` is returned as the parsed value.
 ///
 /// See also [`ParseExt::ignore`].
 ///

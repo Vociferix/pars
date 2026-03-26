@@ -13,7 +13,7 @@ use core::marker::PhantomData;
 
 /// Generates a parser that matches a regular expression over [`ByteInput`].
 ///
-/// [`regex!`] compiles a regular expression at compile time into finite state
+/// [`regex!`] compiles a regular expression at compile time into a finite state
 /// machine implemented as a parser over any [`ByteInput`]. The generated
 /// parser succeeds if the start of the provided input matches the regex. The parsed
 /// value of the parser is just the empty tuple, `()`. To capture the input that
@@ -49,37 +49,61 @@ use core::marker::PhantomData;
 /// ```
 pub use pars_macros::regex_bytes as regex;
 
+/// A byte stream parsing error.
+///
+/// See also [`ErrorKind`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error<I: Input> {
     kind: ErrorKind,
     pos: I,
 }
 
+/// An [`ErrorSeed`](crate::ErrorSeed) for errors raised parsing a byte stream.
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorKind {
+    /// End of input was reached when more bytes were expected
     NeedMoreInput,
+
+    /// More bytes were available in the input when none was expected
     ExpectedEof,
+
+    /// Failed to parse due to invalid bytes
     InvalidInput,
 }
 
+/// Parsing result returned by byte stream parsers
 pub type PResult<T, I> = super::PResult<T, I, Error<I>>;
 
+/// Trait for parsing input symbols that each represent a byte
 pub trait ByteSymbol {
+    /// Extract one byte from the input stream.
+    ///
+    /// Unlike [`Input::next`], this function is fallible. An
+    /// error may be returned when a symbol cannot be represented
+    /// as a byte.
     fn parse_byte<I>(input: I) -> PResult<core::primitive::u8, I>
     where
         I: Input<Symbol = Self>;
 }
 
+/// An [`Input`] stream of bytes
 pub trait ByteInput: Input {
+    /// Extract one byte from the input stream.
+    ///
+    /// Unlike [`Input::next`], this function is fallible. An
+    /// error may be returned when a symbol cannot be represented
+    /// as a byte.
     fn parse_byte(self) -> PResult<core::primitive::u8, Self>;
 }
 
 impl<I: Input> Error<I> {
+    /// Construct a new [`Error`] from an [`ErrorKind`] and an [`Input`] position.
     pub const fn new(kind: ErrorKind, pos: I) -> Self {
         Self { kind, pos }
     }
 
+    /// Gets the underlying [`ErrorKind`].
     pub const fn kind(&self) -> ErrorKind {
         self.kind
     }
@@ -188,6 +212,23 @@ where
     }
 }
 
+/// Creates a parser that exactly matches a sequence of bytes.
+///
+/// The returned parser succeeds if the input starts with exactly
+/// the byte sequence represented by `pattern`. On success, the
+/// input span that matches `pattern` is returned as the parsed
+/// value.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::{PResult, verbatim};
+/// fn hello(input: &[u8]) -> PResult<&[u8], &[u8]> {
+///     verbatim("hello").ok_into().parse(input)
+/// }
+///
+/// assert!(hello.parse(b"hello world") == Ok(Success(b"hello", b" world")));
+/// ```
 #[inline]
 pub const fn verbatim<P, I>(pattern: P) -> impl Parse<I, Parsed = super::Span<I>, Error = Error<I>>
 where
@@ -197,16 +238,48 @@ where
     VerbatimParser(pattern, PhantomData)
 }
 
+/// Parser that exatracts one ASCII character from the input.
+///
+/// If the first byte of input is not a valid ASCII character (bytes `0x00` to `0x7f`),
+/// this parser will return an error. Otherwise, the byte is returned as an
+/// [`AsciiChar`](crate::ascii::AsciiChar).
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::ascii::AsciiChar;
+/// # use pars::bytes::{PResult, ascii_char};
+/// assert!(ascii_char.parse(b"hello") == Ok(Success(AsciiChar::h, b"ello")));
+///
+/// assert!(ascii_char.parse(b"\xffhello").is_err());
+/// ```
 #[cfg(feature = "ascii")]
 pub fn ascii_char<I: ByteInput>(input: I) -> PResult<crate::ascii::AsciiChar, I> {
     u8.try_map(|b| crate::ascii::AsciiChar::from_ascii(b).map_err(|_| ErrorKind::InvalidInput))
         .parse(input)
 }
 
+/// Parser that decodes one UTF-8 codepoint from the input.
+///
+/// This parser takes the first 1 to 4 bytes from the input depending on size of
+/// the encoded codepoint, and returns the decoded [`char`]. If the input does not
+/// start with a valid UTF-8 codepoint, an error is returned.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::{PResult, utf8_char};
+/// assert!(utf8_char.parse(b"hello") == Ok(Success('h', b"ello")));
+///
+/// assert!(utf8_char.parse(b"\xf0\x9f\x98\x8a") == Ok(Success('😊', b"")));
+///
+/// assert!(utf8_char.parse(b"\xff\xff\xff\xff").is_err());
+/// ```
 pub fn utf8_char<I: ByteInput>(input: I) -> PResult<char, I> {
     let Success(b0, rem) = input.clone().parse_byte()?;
 
-    if let Some(ch) = char::from_u32(b0.into()) {
+    if (b0 & 0b1000_0000) == 0 {
+        let ch = unsafe { char::from_u32_unchecked(b0.into()) };
         Ok(Success(ch, rem))
     } else if (b0 & 0b1110_0000) == 0b1100_0000 {
         let tmp = rem.clone();
@@ -303,10 +376,36 @@ pub fn utf8_char<I: ByteInput>(input: I) -> PResult<char, I> {
     }
 }
 
+/// Parser that takes one byte from the input and interprets it as a [`u8`](prim@u8).
+///
+/// This parser always succeeds unless the input is empty.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::u8;
+/// assert!(u8.parse(b"\x01\x02\x03\x04") == Ok(Success(1u8, b"\x02\x03\x04")));
+///
+/// assert!(u8.parse(b"").is_err());
+/// ```
 pub fn u8<I: ByteInput>(input: I) -> PResult<core::primitive::u8, I> {
     I::parse_byte(input)
 }
 
+/// Parser that takes one byte from the input and interprets it as an [`i8`](prim@i8).
+///
+/// This parser always succeeds unless the input is empty.
+///
+/// # Example
+/// ```
+/// # use pars::prelude::*;
+/// # use pars::bytes::i8;
+/// assert!(i8.parse(b"\x01\x02\x03\x04") == Ok(Success(1i8, b"\x02\x03\x04")));
+///
+/// assert!(i8.parse(b"\xff\xff\xff\xff") == Ok(Success(-1i8, b"\xff\xff\xff")));
+///
+/// assert!(i8.parse(b"").is_err());
+/// ```
 pub fn i8<I: ByteInput>(input: I) -> PResult<core::primitive::i8, I> {
     u8.map(u8::cast_signed).parse(input)
 }
