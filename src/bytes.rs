@@ -410,15 +410,52 @@ pub fn i8<I: ByteInput>(input: I) -> PResult<core::primitive::i8, I> {
     u8.map(u8::cast_signed).parse(input)
 }
 
+/// Parsers that read multi-byte integers and characters in big-endian byte order.
+///
+/// Each parser reads exactly as many bytes as required for the target type and
+/// interprets them in big-endian (most significant byte first) order. For example,
+/// [`be::u32`] reads 4 bytes and interprets them as a big-endian `u32`.
+///
+/// Non-power-of-two widths (e.g. [`be::u24`], [`be::i40`]) are zero-extended or
+/// sign-extended to the nearest larger standard integer type.
 pub mod be {
     use super::{ByteInput, Error, ErrorKind, PResult, u8};
     use crate::{Error as PError, Failure, Parse, ParseExt, Success};
 
+    /// Parser that decodes one UTF-16 big-endian character from the input.
+    ///
+    /// Reads one or two big-endian UTF-16 code units (2 or 4 bytes) depending on
+    /// whether the character is in the Basic Multilingual Plane (BMP) or requires a
+    /// surrogate pair. Returns an error if the code units do not form a valid
+    /// Unicode character.
+    ///
+    /// # Known Bug
+    /// Surrogate pair decoding is currently broken: the second code unit is read
+    /// from the start of the input rather than after the first code unit. As a
+    /// result, supplementary-plane characters (code points above U+FFFF) will not
+    /// parse correctly.
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::utf16_char};
+    ///
+    /// // BMP character works correctly
+    /// assert_eq!(utf16_char.parse(b"\x00A".as_slice()), Ok(Success('A', b"".as_slice())));
+    /// ```
+    ///
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::utf16_char};
+    ///
+    /// // Surrogate pair (supplementary plane)
+    /// assert_eq!(utf16_char.parse(b"\xD8\x00\xDC\x00".as_slice()), Ok(Success('\u{10000}', b"".as_slice())));
+    /// ```
     pub fn utf16_char<I: ByteInput>(input: I) -> PResult<char, I> {
         let Success(c0, rem) = u16.parse(input.clone())?;
         if (c0 & 0b1111_1100_0000_0000) == 0b1101_1000_0000_0000 {
             let tmp = rem.clone();
-            let (c1, rem) = match u16.parse(input.clone()) {
+            let (c1, rem) = match u16.parse(tmp.clone()) {
                 Ok(Success(c1, rem)) => (c1, rem),
                 Err(Failure(e, _)) => {
                     return Err(Failure(e, input.clone()));
@@ -441,29 +478,79 @@ pub mod be {
         }
     }
 
+    /// Parser that decodes one UTF-32 big-endian character from the input.
+    ///
+    /// Reads 4 bytes, interprets them as a big-endian `u32`, and converts to a
+    /// [`char`]. Returns an error if the value is not a valid Unicode code point.
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::utf32_char};
+    ///
+    /// assert_eq!(utf32_char.parse(b"\x00\x00\x00A".as_slice()), Ok(Success('A', b"".as_slice())));
+    /// assert_eq!(utf32_char.parse(b"\x00\x01\xF6\x00".as_slice()), Ok(Success('😀', b"".as_slice())));
+    /// assert!(utf32_char.parse(b"\xFF\xFF\xFF\xFF".as_slice()).is_err()); // invalid code point
+    /// ```
     pub fn utf32_char<I: ByteInput>(input: I) -> PResult<char, I> {
         u32.try_map(|ch| char::from_u32(ch).ok_or(ErrorKind::InvalidInput))
             .parse(input)
     }
 
+    /// Parser that reads 2 bytes and returns them as a big-endian [`u16`](prim@u16).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::u16};
+    ///
+    /// assert_eq!(u16.parse(b"\x01\x02".as_slice()), Ok(Success(0x0102u16, b"".as_slice())));
+    /// ```
     pub fn u16<I: ByteInput>(input: I) -> PResult<core::primitive::u16, I> {
         u8.array()
             .map(core::primitive::u16::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 3 bytes and returns them as a big-endian 24-bit unsigned integer stored in a [`u32`](prim@u32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::u24};
+    ///
+    /// assert_eq!(u24.parse(b"\x01\x02\x03".as_slice()), Ok(Success(0x010203u32, b"".as_slice())));
+    /// ```
     pub fn u24<I: ByteInput>(input: I) -> PResult<core::primitive::u32, I> {
         u8.array()
             .map(|[b0, b1, b2]| core::primitive::u32::from_be_bytes([0, b0, b1, b2]))
             .parse(input)
     }
 
+    /// Parser that reads 4 bytes and returns them as a big-endian [`u32`](prim@u32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::u32};
+    ///
+    /// assert_eq!(u32.parse(b"\x01\x02\x03\x04".as_slice()), Ok(Success(0x01020304u32, b"".as_slice())));
+    /// ```
     pub fn u32<I: ByteInput>(input: I) -> PResult<core::primitive::u32, I> {
         u8.array()
             .map(core::primitive::u32::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 5 bytes and returns them as a big-endian 40-bit unsigned integer stored in a [`u64`](prim@u64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::u40};
+    ///
+    /// assert_eq!(u40.parse(b"\x01\x02\x03\x04\x05".as_slice()), Ok(Success(0x0102030405u64, b"".as_slice())));
+    /// ```
     pub fn u40<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4]| {
@@ -472,6 +559,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 6 bytes and returns them as a big-endian 48-bit unsigned integer stored in a [`u64`](prim@u64).
     pub fn u48<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5]| {
@@ -480,6 +568,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 7 bytes and returns them as a big-endian 56-bit unsigned integer stored in a [`u64`](prim@u64).
     pub fn u56<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6]| {
@@ -488,12 +577,22 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 8 bytes and returns them as a big-endian [`u64`](prim@u64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::u64};
+    ///
+    /// assert_eq!(u64.parse(b"\x00\x00\x00\x00\x00\x00\x00\x01".as_slice()), Ok(Success(1u64, b"".as_slice())));
+    /// ```
     pub fn u64<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(core::primitive::u64::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 9 bytes and returns them as a big-endian 72-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u72<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8]| {
@@ -504,6 +603,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 10 bytes and returns them as a big-endian 80-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u80<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9]| {
@@ -514,6 +614,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 11 bytes and returns them as a big-endian 88-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u88<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]| {
@@ -524,6 +625,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 12 bytes and returns them as a big-endian 96-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u96<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11]| {
@@ -534,6 +636,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 13 bytes and returns them as a big-endian 104-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u104<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12]| {
@@ -544,6 +647,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 14 bytes and returns them as a big-endian 112-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u112<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(
@@ -556,6 +660,7 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 15 bytes and returns them as a big-endian 120-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u120<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(
@@ -584,18 +689,48 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 16 bytes and returns them as a big-endian [`u128`](prim@u128).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::u128};
+    ///
+    /// assert_eq!(u128.parse(b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01".as_slice()), Ok(Success(1u128, b"".as_slice())));
+    /// ```
     pub fn u128<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(core::primitive::u128::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 2 bytes and returns them as a big-endian [`i16`](prim@i16).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::i16};
+    ///
+    /// assert_eq!(i16.parse(b"\xff\xfe".as_slice()), Ok(Success(-2i16, b"".as_slice())));
+    /// ```
     pub fn i16<I: ByteInput>(input: I) -> PResult<core::primitive::i16, I> {
         u8.array()
             .map(core::primitive::i16::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 3 bytes and returns them as a big-endian 24-bit signed integer stored in an [`i32`](prim@i32).
+    ///
+    /// The value is sign-extended from 24 bits to 32 bits.
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::i24};
+    ///
+    /// assert_eq!(i24.parse(b"\xff\xff\xff".as_slice()), Ok(Success(-1i32, b"".as_slice())));
+    /// assert_eq!(i24.parse(b"\x00\x01\x00".as_slice()), Ok(Success(256i32, b"".as_slice())));
+    /// ```
     pub fn i24<I: ByteInput>(input: I) -> PResult<core::primitive::i32, I> {
         u8.array()
             .map(|[b0, b1, b2]| {
@@ -605,12 +740,24 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 4 bytes and returns them as a big-endian [`i32`](prim@i32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::i32};
+    ///
+    /// assert_eq!(i32.parse(b"\xff\xff\xff\xff".as_slice()), Ok(Success(-1i32, b"".as_slice())));
+    /// ```
     pub fn i32<I: ByteInput>(input: I) -> PResult<core::primitive::i32, I> {
         u8.array()
             .map(core::primitive::i32::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 5 bytes and returns them as a big-endian 40-bit signed integer stored in an [`i64`](prim@i64).
+    ///
+    /// The value is sign-extended from 40 bits to 64 bits.
     pub fn i40<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4]| {
@@ -620,6 +767,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 6 bytes and returns them as a big-endian 48-bit signed integer stored in an [`i64`](prim@i64).
+    ///
+    /// The value is sign-extended from 48 bits to 64 bits.
     pub fn i48<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5]| {
@@ -629,6 +779,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 7 bytes and returns them as a big-endian 56-bit signed integer stored in an [`i64`](prim@i64).
+    ///
+    /// The value is sign-extended from 56 bits to 64 bits.
     pub fn i56<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6]| {
@@ -638,12 +791,24 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 8 bytes and returns them as a big-endian [`i64`](prim@i64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::i64};
+    ///
+    /// assert_eq!(i64.parse(b"\xff\xff\xff\xff\xff\xff\xff\xff".as_slice()), Ok(Success(-1i64, b"".as_slice())));
+    /// ```
     pub fn i64<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(core::primitive::i64::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 9 bytes and returns them as a big-endian 72-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 72 bits to 128 bits.
     pub fn i72<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8]| {
@@ -655,6 +820,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 10 bytes and returns them as a big-endian 80-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 80 bits to 128 bits.
     pub fn i80<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9]| {
@@ -666,6 +834,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 11 bytes and returns them as a big-endian 88-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 88 bits to 128 bits.
     pub fn i88<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]| {
@@ -677,6 +848,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 12 bytes and returns them as a big-endian 96-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 96 bits to 128 bits.
     pub fn i96<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11]| {
@@ -688,6 +862,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 13 bytes and returns them as a big-endian 104-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 104 bits to 128 bits.
     pub fn i104<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12]| {
@@ -699,6 +876,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 14 bytes and returns them as a big-endian 112-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 112 bits to 128 bits.
     pub fn i112<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(
@@ -712,6 +892,9 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 15 bytes and returns them as a big-endian 120-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 120 bits to 128 bits.
     pub fn i120<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(
@@ -741,18 +924,45 @@ pub mod be {
             .parse(input)
     }
 
+    /// Parser that reads 16 bytes and returns them as a big-endian [`i128`](prim@i128).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::i128};
+    ///
+    /// assert_eq!(i128.parse(b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff".as_slice()), Ok(Success(-1i128, b"".as_slice())));
+    /// ```
     pub fn i128<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(core::primitive::i128::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 4 bytes and returns them as a big-endian IEEE 754 single-precision [`f32`](prim@f32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::f32};
+    ///
+    /// assert_eq!(f32.parse(b"\x3f\x80\x00\x00".as_slice()), Ok(Success(1.0f32, b"".as_slice())));
+    /// ```
     pub fn f32<I: ByteInput>(input: I) -> PResult<core::primitive::f32, I> {
         u8.array()
             .map(core::primitive::f32::from_be_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 8 bytes and returns them as a big-endian IEEE 754 double-precision [`f64`](prim@f64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, be::f64};
+    ///
+    /// assert_eq!(f64.parse(b"\x3f\xf0\x00\x00\x00\x00\x00\x00".as_slice()), Ok(Success(1.0f64, b"".as_slice())));
+    /// ```
     pub fn f64<I: ByteInput>(input: I) -> PResult<core::primitive::f64, I> {
         u8.array()
             .map(core::primitive::f64::from_be_bytes)
@@ -760,15 +970,52 @@ pub mod be {
     }
 }
 
+/// Parsers that read multi-byte integers and characters in little-endian byte order.
+///
+/// Each parser reads exactly as many bytes as required for the target type and
+/// interprets them in little-endian (least significant byte first) order. For example,
+/// [`le::u32`] reads 4 bytes and interprets them as a little-endian `u32`.
+///
+/// Non-power-of-two widths (e.g. [`le::u24`], [`le::i40`]) are zero-extended or
+/// sign-extended to the nearest larger standard integer type.
 pub mod le {
     use super::{ByteInput, Error, ErrorKind, PResult, u8};
     use crate::{Error as PError, Failure, Parse, ParseExt, Success};
 
+    /// Parser that decodes one UTF-16 little-endian character from the input.
+    ///
+    /// Reads one or two little-endian UTF-16 code units (2 or 4 bytes) depending on
+    /// whether the character is in the Basic Multilingual Plane (BMP) or requires a
+    /// surrogate pair. Returns an error if the code units do not form a valid
+    /// Unicode character.
+    ///
+    /// # Known Bug
+    /// Surrogate pair decoding is currently broken: the second code unit is read
+    /// from the start of the input rather than after the first code unit. As a
+    /// result, supplementary-plane characters (code points above U+FFFF) will not
+    /// parse correctly.
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::utf16_char};
+    ///
+    /// // BMP character works correctly
+    /// assert_eq!(utf16_char.parse(b"A\x00".as_slice()), Ok(Success('A', b"".as_slice())));
+    /// ```
+    ///
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::utf16_char};
+    ///
+    /// // Surrogate pair (supplementary plane)
+    /// assert_eq!(utf16_char.parse(b"\x00\xD8\x00\xDC".as_slice()), Ok(Success('\u{10000}', b"".as_slice())));
+    /// ```
     pub fn utf16_char<I: ByteInput>(input: I) -> PResult<char, I> {
         let Success(c0, rem) = u16.parse(input.clone())?;
         if (c0 & 0b1111_1100_0000_0000) == 0b1101_1000_0000_0000 {
             let tmp = rem.clone();
-            let (c1, rem) = match u16.parse(input.clone()) {
+            let (c1, rem) = match u16.parse(tmp.clone()) {
                 Ok(Success(c1, rem)) => (c1, rem),
                 Err(Failure(e, _)) => {
                     return Err(Failure(e, input.clone()));
@@ -791,29 +1038,79 @@ pub mod le {
         }
     }
 
+    /// Parser that decodes one UTF-32 little-endian character from the input.
+    ///
+    /// Reads 4 bytes, interprets them as a little-endian `u32`, and converts to a
+    /// [`char`]. Returns an error if the value is not a valid Unicode code point.
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::utf32_char};
+    ///
+    /// assert_eq!(utf32_char.parse(b"A\x00\x00\x00".as_slice()), Ok(Success('A', b"".as_slice())));
+    /// assert_eq!(utf32_char.parse(b"\x00\xF6\x01\x00".as_slice()), Ok(Success('😀', b"".as_slice())));
+    /// assert!(utf32_char.parse(b"\xff\xff\xff\xff".as_slice()).is_err()); // invalid code point
+    /// ```
     pub fn utf32_char<I: ByteInput>(input: I) -> PResult<char, I> {
         u32.try_map(|ch| char::from_u32(ch).ok_or(ErrorKind::InvalidInput))
             .parse(input)
     }
 
+    /// Parser that reads 2 bytes and returns them as a little-endian [`u16`](prim@u16).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::u16};
+    ///
+    /// assert_eq!(u16.parse(b"\x02\x01".as_slice()), Ok(Success(0x0102u16, b"".as_slice())));
+    /// ```
     pub fn u16<I: ByteInput>(input: I) -> PResult<core::primitive::u16, I> {
         u8.array()
             .map(core::primitive::u16::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 3 bytes and returns them as a little-endian 24-bit unsigned integer stored in a [`u32`](prim@u32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::u24};
+    ///
+    /// assert_eq!(u24.parse(b"\x03\x02\x01".as_slice()), Ok(Success(0x010203u32, b"".as_slice())));
+    /// ```
     pub fn u24<I: ByteInput>(input: I) -> PResult<core::primitive::u32, I> {
         u8.array()
             .map(|[b0, b1, b2]| core::primitive::u32::from_le_bytes([b0, b1, b2, 0]))
             .parse(input)
     }
 
+    /// Parser that reads 4 bytes and returns them as a little-endian [`u32`](prim@u32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::u32};
+    ///
+    /// assert_eq!(u32.parse(b"\x04\x03\x02\x01".as_slice()), Ok(Success(0x01020304u32, b"".as_slice())));
+    /// ```
     pub fn u32<I: ByteInput>(input: I) -> PResult<core::primitive::u32, I> {
         u8.array()
             .map(core::primitive::u32::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 5 bytes and returns them as a little-endian 40-bit unsigned integer stored in a [`u64`](prim@u64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::u40};
+    ///
+    /// assert_eq!(u40.parse(b"\x05\x04\x03\x02\x01".as_slice()), Ok(Success(0x0102030405u64, b"".as_slice())));
+    /// ```
     pub fn u40<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4]| {
@@ -822,6 +1119,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 6 bytes and returns them as a little-endian 48-bit unsigned integer stored in a [`u64`](prim@u64).
     pub fn u48<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5]| {
@@ -830,6 +1128,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 7 bytes and returns them as a little-endian 56-bit unsigned integer stored in a [`u64`](prim@u64).
     pub fn u56<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6]| {
@@ -838,12 +1137,22 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 8 bytes and returns them as a little-endian [`u64`](prim@u64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::u64};
+    ///
+    /// assert_eq!(u64.parse(b"\x01\x00\x00\x00\x00\x00\x00\x00".as_slice()), Ok(Success(1u64, b"".as_slice())));
+    /// ```
     pub fn u64<I: ByteInput>(input: I) -> PResult<core::primitive::u64, I> {
         u8.array()
             .map(core::primitive::u64::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 9 bytes and returns them as a little-endian 72-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u72<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8]| {
@@ -854,6 +1163,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 10 bytes and returns them as a little-endian 80-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u80<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9]| {
@@ -864,6 +1174,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 11 bytes and returns them as a little-endian 88-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u88<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]| {
@@ -874,6 +1185,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 12 bytes and returns them as a little-endian 96-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u96<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11]| {
@@ -884,6 +1196,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 13 bytes and returns them as a little-endian 104-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u104<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12]| {
@@ -894,6 +1207,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 14 bytes and returns them as a little-endian 112-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u112<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(
@@ -906,6 +1220,7 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 15 bytes and returns them as a little-endian 120-bit unsigned integer stored in a [`u128`](prim@u128).
     pub fn u120<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(
@@ -934,18 +1249,48 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 16 bytes and returns them as a little-endian [`u128`](prim@u128).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::u128};
+    ///
+    /// assert_eq!(u128.parse(b"\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00".as_slice()), Ok(Success(1u128, b"".as_slice())));
+    /// ```
     pub fn u128<I: ByteInput>(input: I) -> PResult<core::primitive::u128, I> {
         u8.array()
             .map(core::primitive::u128::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 2 bytes and returns them as a little-endian [`i16`](prim@i16).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::i16};
+    ///
+    /// assert_eq!(i16.parse(b"\xfe\xff".as_slice()), Ok(Success(-2i16, b"".as_slice())));
+    /// ```
     pub fn i16<I: ByteInput>(input: I) -> PResult<core::primitive::i16, I> {
         u8.array()
             .map(core::primitive::i16::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 3 bytes and returns them as a little-endian 24-bit signed integer stored in an [`i32`](prim@i32).
+    ///
+    /// The value is sign-extended from 24 bits to 32 bits.
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::i24};
+    ///
+    /// assert_eq!(i24.parse(b"\xff\xff\xff".as_slice()), Ok(Success(-1i32, b"".as_slice())));
+    /// assert_eq!(i24.parse(b"\x00\x01\x00".as_slice()), Ok(Success(256i32, b"".as_slice())));
+    /// ```
     pub fn i24<I: ByteInput>(input: I) -> PResult<core::primitive::i32, I> {
         u8.array()
             .map(|[b0, b1, b2]| {
@@ -955,12 +1300,24 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 4 bytes and returns them as a little-endian [`i32`](prim@i32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::i32};
+    ///
+    /// assert_eq!(i32.parse(b"\xff\xff\xff\xff".as_slice()), Ok(Success(-1i32, b"".as_slice())));
+    /// ```
     pub fn i32<I: ByteInput>(input: I) -> PResult<core::primitive::i32, I> {
         u8.array()
             .map(core::primitive::i32::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 5 bytes and returns them as a little-endian 40-bit signed integer stored in an [`i64`](prim@i64).
+    ///
+    /// The value is sign-extended from 40 bits to 64 bits.
     pub fn i40<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4]| {
@@ -970,6 +1327,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 6 bytes and returns them as a little-endian 48-bit signed integer stored in an [`i64`](prim@i64).
+    ///
+    /// The value is sign-extended from 48 bits to 64 bits.
     pub fn i48<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5]| {
@@ -979,6 +1339,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 7 bytes and returns them as a little-endian 56-bit signed integer stored in an [`i64`](prim@i64).
+    ///
+    /// The value is sign-extended from 56 bits to 64 bits.
     pub fn i56<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6]| {
@@ -988,12 +1351,24 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 8 bytes and returns them as a little-endian [`i64`](prim@i64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::i64};
+    ///
+    /// assert_eq!(i64.parse(b"\xff\xff\xff\xff\xff\xff\xff\xff".as_slice()), Ok(Success(-1i64, b"".as_slice())));
+    /// ```
     pub fn i64<I: ByteInput>(input: I) -> PResult<core::primitive::i64, I> {
         u8.array()
             .map(core::primitive::i64::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 9 bytes and returns them as a little-endian 72-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 72 bits to 128 bits.
     pub fn i72<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8]| {
@@ -1005,6 +1380,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 10 bytes and returns them as a little-endian 80-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 80 bits to 128 bits.
     pub fn i80<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9]| {
@@ -1016,6 +1394,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 11 bytes and returns them as a little-endian 88-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 88 bits to 128 bits.
     pub fn i88<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]| {
@@ -1027,6 +1408,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 12 bytes and returns them as a little-endian 96-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 96 bits to 128 bits.
     pub fn i96<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11]| {
@@ -1038,6 +1422,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 13 bytes and returns them as a little-endian 104-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 104 bits to 128 bits.
     pub fn i104<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(|[b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12]| {
@@ -1049,6 +1436,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 14 bytes and returns them as a little-endian 112-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 112 bits to 128 bits.
     pub fn i112<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(
@@ -1062,6 +1452,9 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 15 bytes and returns them as a little-endian 120-bit signed integer stored in an [`i128`](prim@i128).
+    ///
+    /// The value is sign-extended from 120 bits to 128 bits.
     pub fn i120<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(
@@ -1091,18 +1484,45 @@ pub mod le {
             .parse(input)
     }
 
+    /// Parser that reads 16 bytes and returns them as a little-endian [`i128`](prim@i128).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::i128};
+    ///
+    /// assert_eq!(i128.parse(b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff".as_slice()), Ok(Success(-1i128, b"".as_slice())));
+    /// ```
     pub fn i128<I: ByteInput>(input: I) -> PResult<core::primitive::i128, I> {
         u8.array()
             .map(core::primitive::i128::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 4 bytes and returns them as a little-endian IEEE 754 single-precision [`f32`](prim@f32).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::f32};
+    ///
+    /// assert_eq!(f32.parse(b"\x00\x00\x80\x3f".as_slice()), Ok(Success(1.0f32, b"".as_slice())));
+    /// ```
     pub fn f32<I: ByteInput>(input: I) -> PResult<core::primitive::f32, I> {
         u8.array()
             .map(core::primitive::f32::from_le_bytes)
             .parse(input)
     }
 
+    /// Parser that reads 8 bytes and returns them as a little-endian IEEE 754 double-precision [`f64`](prim@f64).
+    ///
+    /// # Example
+    /// ```
+    /// use pars::prelude::*;
+    /// use pars::bytes::{PResult, le::f64};
+    ///
+    /// assert_eq!(f64.parse(b"\x00\x00\x00\x00\x00\x00\xf0\x3f".as_slice()), Ok(Success(1.0f64, b"".as_slice())));
+    /// ```
     pub fn f64<I: ByteInput>(input: I) -> PResult<core::primitive::f64, I> {
         u8.array()
             .map(core::primitive::f64::from_le_bytes)

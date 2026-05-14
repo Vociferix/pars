@@ -4,8 +4,55 @@ use super::Property;
 #[allow(unused_imports)]
 use icu_properties::props::{self as icup, BinaryProperty, EnumeratedProperty};
 
-#[doc(inline)]
-pub use crate::{unicode_prop_all as all, unicode_prop_any as any};
+/// Creates a property that matches characters satisfying ALL of the given properties.
+///
+/// A variadic alternative to chaining [`and`] calls. With a single argument `all!(p)` is
+/// equivalent to `p`; with two or more it is equivalent to repeated [`and`] nesting.
+///
+/// Prefer the `&` operator when combining exactly two properties inline. Use this macro
+/// when combining three or more, or when building properties programmatically.
+///
+/// See also [`any!`] for the disjunctive counterpart.
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::{Alphabetic, Lowercase, Cased, all}, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn lowercase_letter(input: &str) -> PResult<char, &str> {
+///     char_with_prop(all!(Alphabetic, Cased, Lowercase)).parse(input)
+/// }
+///
+/// assert!(lowercase_letter.parse("a").is_ok());
+/// assert!(lowercase_letter.parse("A").is_err()); // uppercase
+/// assert!(lowercase_letter.parse("1").is_err()); // not a letter
+/// ```
+pub use crate::unicode_prop_all as all;
+
+/// Creates a property that matches characters satisfying ANY of the given properties.
+///
+/// A variadic alternative to chaining [`or`] calls. With a single argument `any!(p)` is
+/// equivalent to `p`; with two or more it is equivalent to repeated [`or`] nesting.
+///
+/// Prefer the `|` operator when combining exactly two properties inline. Use this macro
+/// when combining three or more, or when building properties programmatically.
+///
+/// See also [`all!`] for the conjunctive counterpart.
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::{Alphabetic, Diacritic, WhiteSpace, any}, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn alpha_or_diacritic_or_space(input: &str) -> PResult<char, &str> {
+///     char_with_prop(any!(Alphabetic, Diacritic, WhiteSpace)).parse(input)
+/// }
+///
+/// assert!(alpha_or_diacritic_or_space.parse("a").is_ok());
+/// assert!(alpha_or_diacritic_or_space.parse(" ").is_ok());
+/// assert!(alpha_or_diacritic_or_space.parse("1").is_err());
+/// ```
+pub use crate::unicode_prop_any as any;
 
 #[doc(hidden)]
 #[macro_export]
@@ -35,23 +82,97 @@ macro_rules! unicode_prop_any {
     }};
 }
 
+/// A property that matches characters NOT matched by the inner property.
+///
+/// Construct via the `!` operator on any type implementing [`Property`](super::Property),
+/// or via the [`not`] function.
 #[derive(Debug, Clone, Copy)]
 pub struct Not<P: Property>(P);
 
+/// A property that matches characters matched by both inner properties.
+///
+/// Construct via the `&` operator on any two types implementing [`Property`](super::Property),
+/// or via the [`and`] function.
 #[derive(Debug, Clone, Copy)]
 pub struct And<L: Property, R: Property>(L, R);
 
+/// A property that matches characters matched by either inner property.
+///
+/// Construct via the `|` operator on any two types implementing [`Property`](super::Property),
+/// or via the [`or`] function.
 #[derive(Debug, Clone, Copy)]
 pub struct Or<L: Property, R: Property>(L, R);
 
+/// Creates a property that matches characters NOT matched by `property`.
+///
+/// Equivalent to using the `!` operator. Prefer the operator form for inline use;
+/// this function is useful in `const` contexts and when building properties
+/// programmatically.
+///
+/// See also the [`all!`] macro.
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::{Alphabetic, not}, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn non_alpha(input: &str) -> PResult<char, &str> {
+///     char_with_prop(not(Alphabetic)).parse(input)
+/// }
+///
+/// assert!(non_alpha.parse("1").is_ok());
+/// assert!(non_alpha.parse("a").is_err());
+/// ```
 pub const fn not<P: Property>(property: P) -> Not<P> {
     Not(property)
 }
 
+/// Creates a property that matches characters satisfying both `lhs` and `rhs`.
+///
+/// Equivalent to using the `&` operator. Prefer the operator form for inline use;
+/// this function is useful in `const` contexts and when building properties
+/// programmatically.
+///
+/// See also the [`all!`] macro.
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::{Alphabetic, Lowercase, and}, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn lowercase_letter(input: &str) -> PResult<char, &str> {
+///     char_with_prop(and(Alphabetic, Lowercase)).parse(input)
+/// }
+///
+/// assert!(lowercase_letter.parse("a").is_ok());
+/// assert!(lowercase_letter.parse("A").is_err());
+/// assert!(lowercase_letter.parse("1").is_err());
+/// ```
 pub const fn and<L: Property, R: Property>(lhs: L, rhs: R) -> And<L, R> {
     And(lhs, rhs)
 }
 
+/// Creates a property that matches characters satisfying either `lhs` or `rhs`.
+///
+/// Equivalent to using the `|` operator. Prefer the operator form for inline use;
+/// this function is useful in `const` contexts and when building properties
+/// programmatically.
+///
+/// See also the [`any!`] macro.
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::{Uppercase, Lowercase, or}, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn letter(input: &str) -> PResult<char, &str> {
+///     char_with_prop(or(Uppercase, Lowercase)).parse(input)
+/// }
+///
+/// assert!(letter.parse("A").is_ok());
+/// assert!(letter.parse("a").is_ok());
+/// assert!(letter.parse("1").is_err());
+/// ```
 pub const fn or<L: Property, R: Property>(lhs: L, rhs: R) -> Or<L, R> {
     Or(lhs, rhs)
 }
@@ -909,11 +1030,25 @@ def_enum_prop! {
     default = Other
 }
 
+/// The Unicode Indic Conjunct Break property, used for grapheme cluster segmentation.
+///
+/// This property is not part of the Unicode Character Database as a standard
+/// enumerated property; it is derived from other properties (Script, Indic Syllabic
+/// Category, and Grapheme Cluster Break) for use in the Unicode grapheme cluster
+/// boundary algorithm (Unicode Standard Annex #29).
+///
+/// Used internally by [`strict::grapheme_cluster`](super::strict::grapheme_cluster)
+/// and [`lossy::grapheme_cluster`](super::lossy::grapheme_cluster) to correctly
+/// segment Indic conjunct sequences.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum IndicConjunctBreak {
+    /// The code point does not participate in Indic conjunct clusters.
     None,
+    /// A virama or similar character that links consonants in a conjunct.
     Linker,
+    /// A consonant character that can participate in a conjunct cluster.
     Consonant,
+    /// A combining character (ZWJ or Extend) within an Indic conjunct.
     Extend,
 }
 

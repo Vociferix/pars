@@ -38,52 +38,119 @@ mod loc;
 
 pub use loc::*;
 
+/// An [`ErrorSeed`](crate::ErrorSeed) for errors raised while parsing an ASCII character stream.
+///
+/// See also [`Error`].
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorKind {
+    /// End of input was reached when more characters were expected.
     NeedMoreInput,
+    /// More input was available when the end of input was expected.
     ExpectedEof,
+    /// Failed to parse due to an invalid character or value.
     InvalidInput,
+    /// A non-ASCII character was encountered when strict ASCII was required.
+    ///
+    /// This variant is produced by parsers in the [`strict`] module when a
+    /// character not in the ASCII range (`0x00`–`0x7F`) is encountered. The
+    /// [`lossy`] module never produces this variant — instead it substitutes
+    /// the character with [`AsciiChar::SUB`].
     NonAsciiChar,
 }
 
+/// An ASCII character stream parsing error.
+///
+/// See also [`ErrorKind`].
+///
+/// # Example
+/// ```
+/// use pars::ascii::{strict, ErrorKind, PResult};
+/// use pars::prelude::*;
+///
+/// let err = strict::char.parse("é").unwrap_err().0;
+/// assert_eq!(err.kind(), ErrorKind::NonAsciiChar);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error<I: Input> {
     kind: ErrorKind,
     pos: I,
 }
 
+/// The [`Result`](crate::PResult) type returned by ASCII character stream parsers.
 pub type PResult<T, I> = super::PResult<T, I, Error<I>>;
 
+/// Trait for input symbol types that can be interpreted as ASCII characters.
+///
+/// [`AsciiSymbol`] is implemented for common types from which an [`AsciiChar`] can
+/// be extracted, including [`u8`], [`i8`], [`u16`], [`i16`], [`u32`], [`i32`], [`char`],
+/// and [`AsciiChar`] itself.
+///
+/// There are two methods: [`parse_char`](AsciiSymbol::parse_char) which fails on
+/// non-ASCII input, and [`parse_char_lossy`](AsciiSymbol::parse_char_lossy) which
+/// replaces non-ASCII input with [`AsciiChar::SUB`].
 pub trait AsciiSymbol {
+    /// Extracts one [`AsciiChar`] from the input stream, failing on non-ASCII input.
     fn parse_char<I>(input: I) -> PResult<AsciiChar, I>
     where
         I: Input<Symbol = Self>;
 
+    /// Extracts one [`AsciiChar`] from the input stream, replacing non-ASCII with [`AsciiChar::SUB`].
     fn parse_char_lossy<I>(input: I) -> PResult<AsciiChar, I>
     where
         I: Input<Symbol = Self>;
 }
 
+/// An [`Input`] stream that can be parsed as ASCII characters.
+///
+/// [`AsciiInput`] is automatically implemented for any [`Input`] whose symbol type
+/// implements [`AsciiSymbol`]. It provides convenience methods for extracting
+/// [`AsciiChar`] values from the stream.
 pub trait AsciiInput: Input {
+    /// Extracts one [`AsciiChar`] from the input stream, failing on non-ASCII input.
     fn parse_char(self) -> PResult<AsciiChar, Self>;
 
+    /// Extracts one [`AsciiChar`] from the input stream, replacing non-ASCII with [`AsciiChar::SUB`].
     fn parse_char_lossy(self) -> PResult<AsciiChar, Self>;
 }
 
+/// A predicate over [`AsciiChar`] values, used to classify characters.
+///
+/// Types implementing [`Property`] are used with parsers such as
+/// [`strict::char_with_prop`](strict::char_with_prop) and
+/// [`lossy::char_with_prop`](lossy::char_with_prop) to match characters with
+/// specific properties. The [`prop`] module provides a set of built-in property
+/// types, and properties can be combined with `!`, `&`, and `|` operators.
+///
+/// # Example
+/// ```
+/// use pars::ascii::{prop::Digit, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn decimal_digit(input: &str) -> PResult<pars::ascii::AsciiChar, &str> {
+///     char_with_prop(Digit).parse(input)
+/// }
+///
+/// assert!(decimal_digit.parse("5").is_ok());
+/// assert!(decimal_digit.parse("a").is_err());
+/// ```
 pub trait Property: core::fmt::Debug + Copy {
+    /// Returns `true` if this property applies to `ch`.
     fn contains(self, ch: AsciiChar) -> bool;
 }
 
 impl<I: Input> Error<I> {
+    /// Constructs a new [`Error`] from an [`ErrorKind`] and an input position.
     pub const fn new(kind: ErrorKind, pos: I) -> Self {
         Self { kind, pos }
     }
 
+    /// Constructs a new error representing a non-ASCII character in the input.
     pub const fn non_ascii_char(pos: I) -> Self {
         Self::new(ErrorKind::NonAsciiChar, pos)
     }
 
+    /// Returns the [`ErrorKind`] describing why parsing failed.
     pub const fn kind(&self) -> ErrorKind {
         self.kind
     }

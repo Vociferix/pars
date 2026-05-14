@@ -361,7 +361,7 @@ pub fn compile_ascii_strict(regex: &str) -> proc_macro2::TokenStream {
                                 match b.as_byte() {
                                     #(#transitions,)*
                                     #[allow(unreachable_patterns)]
-                                    128u8..=255u8 => { unsafe { ::core::hint::unrechable_unchecked(); } },
+                                    128u8..=255u8 => { unsafe { ::core::hint::unreachable_unchecked(); } },
                                     #[allow(unreachable_patterns)]
                                     _ => {},
                                 }

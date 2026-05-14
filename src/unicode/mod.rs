@@ -8,33 +8,77 @@ mod loc;
 
 pub use loc::*;
 
+/// An [`ErrorSeed`](crate::ErrorSeed) for errors raised while parsing a Unicode character stream.
+///
+/// In addition to the three standard error kinds shared with other modules,
+/// this enum includes variants for Unicode-specific failure modes.
+///
+/// See also [`Error`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorKind {
+    /// End of input was reached when more characters were expected.
     NeedMoreInput,
+    /// More input was available when the end of input was expected.
     ExpectedEof,
+    /// Failed to parse due to an invalid character or value.
     InvalidInput,
+    /// An invalid UTF-8 byte sequence was encountered.
     InvalidUtf8,
+    /// An invalid UTF-16 code unit sequence was encountered.
     InvalidUtf16,
+    /// A numeric value was not a valid Unicode code point.
     InvalidCodePoint,
 }
 
+/// A Unicode character stream parsing error.
+///
+/// See also [`ErrorKind`].
+///
+/// # Example
+/// ```
+/// use pars::unicode::{strict, ErrorKind, PResult};
+/// use pars::prelude::*;
+///
+/// let err = strict::char.parse("").unwrap_err().0;
+/// assert_eq!(err.kind(), ErrorKind::NeedMoreInput);
+/// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error<I: Input> {
     kind: ErrorKind,
     pos: I,
 }
 
+/// The [`Result`](crate::PResult) type returned by Unicode character stream parsers.
 pub type PResult<T, I> = super::PResult<T, I, Error<I>>;
 
+/// Trait for input symbol types that can be interpreted as Unicode characters.
+///
+/// [`UnicodeSymbol`] is implemented for common types from which a [`char`] can be
+/// extracted, covering the main Unicode encodings:
+///
+/// - [`char`] — native Rust Unicode scalar values, always valid
+/// - [`u8`] / [`i8`] — UTF-8 encoded bytes
+/// - [`u16`] / [`i16`] — UTF-16 code units
+/// - [`u32`] / [`i32`] — UTF-32 code points (one code point per element)
+/// - [`AsciiChar`](crate::ascii::AsciiChar) — ASCII characters (always valid Unicode)
+///
+/// For each encoding there are two variants: a strict method that fails on invalid
+/// input, and a lossy method that replaces invalid sequences with the Unicode
+/// Replacement Character `U+FFFD`.
 pub trait UnicodeSymbol {
+    /// Extracts one [`char`] from the input, failing on invalid Unicode.
     fn parse_char<I>(input: I) -> PResult<core::primitive::char, I>
     where
         I: Input<Symbol = Self>;
 
+    /// Extracts one [`char`] from the input, replacing invalid Unicode with `U+FFFD`.
     fn parse_char_lossy<I>(input: I) -> PResult<core::primitive::char, I>
     where
         I: Input<Symbol = Self>;
 
+    /// Extracts one character and writes its UTF-8 encoding into `buf`, failing on invalid Unicode.
+    ///
+    /// `buf` must be at least 4 bytes long.
     fn parse_utf8<I>(input: I, buf: &mut [u8]) -> PResult<&str, I>
     where
         I: Input<Symbol = Self>,
@@ -43,6 +87,9 @@ pub trait UnicodeSymbol {
         Ok(Success(ch.encode_utf8(buf), rem))
     }
 
+    /// Extracts one character and writes its UTF-8 encoding into `buf`, replacing invalid Unicode with `U+FFFD`.
+    ///
+    /// `buf` must be at least 4 bytes long.
     fn parse_utf8_lossy<I>(input: I, buf: &mut [u8]) -> PResult<&str, I>
     where
         I: Input<Symbol = Self>,
@@ -51,6 +98,9 @@ pub trait UnicodeSymbol {
         Ok(Success(ch.encode_utf8(buf), rem))
     }
 
+    /// Extracts one character and writes its UTF-16 encoding into `buf`, failing on invalid Unicode.
+    ///
+    /// `buf` must be at least 2 elements long.
     fn parse_utf16<I>(input: I, buf: &mut [u16]) -> PResult<&[u16], I>
     where
         I: Input<Symbol = Self>,
@@ -59,6 +109,9 @@ pub trait UnicodeSymbol {
         Ok(Success(ch.encode_utf16(buf), rem))
     }
 
+    /// Extracts one character and writes its UTF-16 encoding into `buf`, replacing invalid Unicode with `U+FFFD`.
+    ///
+    /// `buf` must be at least 2 elements long.
     fn parse_utf16_lossy<I>(input: I, buf: &mut [u16]) -> PResult<&[u16], I>
     where
         I: Input<Symbol = Self>,
@@ -68,33 +121,76 @@ pub trait UnicodeSymbol {
     }
 }
 
+/// An [`Input`] stream that can be parsed as Unicode characters.
+///
+/// [`UnicodeInput`] is automatically implemented for any [`Input`] whose symbol
+/// type implements [`UnicodeSymbol`]. It provides convenience methods that
+/// dispatch to the appropriate [`UnicodeSymbol`] implementation for the symbol
+/// type.
 pub trait UnicodeInput: Input {
+    /// Extracts one [`char`] from the input, failing on invalid Unicode.
     fn parse_char(self) -> PResult<core::primitive::char, Self>;
 
+    /// Extracts one [`char`] from the input, replacing invalid Unicode with `U+FFFD`.
     fn parse_char_lossy(self) -> PResult<core::primitive::char, Self>;
 
+    /// Extracts one character and writes its UTF-8 encoding into `buf`, failing on invalid Unicode.
+    ///
+    /// `buf` must be at least 4 bytes long.
     fn parse_utf8(self, buf: &mut [u8]) -> PResult<&str, Self> {
         let Success(ch, rem) = self.parse_char()?;
         Ok(Success(ch.encode_utf8(buf), rem))
     }
 
+    /// Extracts one character and writes its UTF-8 encoding into `buf`, replacing invalid Unicode with `U+FFFD`.
+    ///
+    /// `buf` must be at least 4 bytes long.
     fn parse_utf8_lossy(self, buf: &mut [u8]) -> PResult<&str, Self> {
         let Success(ch, rem) = self.parse_char_lossy()?;
         Ok(Success(ch.encode_utf8(buf), rem))
     }
 
+    /// Extracts one character and writes its UTF-16 encoding into `buf`, failing on invalid Unicode.
+    ///
+    /// `buf` must be at least 2 elements long.
     fn parse_utf16(self, buf: &mut [u16]) -> PResult<&[u16], Self> {
         let Success(ch, rem) = self.parse_char()?;
         Ok(Success(ch.encode_utf16(buf), rem))
     }
 
+    /// Extracts one character and writes its UTF-16 encoding into `buf`, replacing invalid Unicode with `U+FFFD`.
+    ///
+    /// `buf` must be at least 2 elements long.
     fn parse_utf16_lossy(self, buf: &mut [u16]) -> PResult<&[u16], Self> {
         let Success(ch, rem) = self.parse_char_lossy()?;
         Ok(Success(ch.encode_utf16(buf), rem))
     }
 }
 
+/// A predicate over [`char`] values, used to classify Unicode characters.
+///
+/// Types implementing [`Property`] are used with parsers such as
+/// [`strict::char_with_prop`](strict::char_with_prop) and
+/// [`lossy::char_with_prop`](lossy::char_with_prop) to match characters with
+/// specific properties. The [`prop`] module provides a large set of built-in
+/// Unicode property types sourced from the ICU data tables, and properties can
+/// be combined with `!`, `&`, and `|` operators.
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::GeneralCategory, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn letter(input: &str) -> PResult<char, &str> {
+///     char_with_prop(GeneralCategory::UppercaseLetter | GeneralCategory::LowercaseLetter)
+///         .parse(input)
+/// }
+///
+/// assert!(letter.parse("a").is_ok());
+/// assert!(letter.parse("1").is_err());
+/// ```
 pub trait Property: core::fmt::Debug + Copy {
+    /// Returns `true` if this property applies to `ch`.
     fn contains(self, ch: core::primitive::char) -> bool;
 }
 
@@ -987,22 +1083,27 @@ where
 }
 
 impl<I: Input> Error<I> {
+    /// Constructs a new [`Error`] from an [`ErrorKind`] and an input position.
     pub const fn new(kind: ErrorKind, pos: I) -> Self {
         Self { kind, pos }
     }
 
+    /// Constructs a new error representing an invalid UTF-8 byte sequence.
     pub const fn invalid_utf8(pos: I) -> Self {
         Self::new(ErrorKind::InvalidUtf8, pos)
     }
 
+    /// Constructs a new error representing an invalid UTF-16 code unit sequence.
     pub const fn invalid_utf16(pos: I) -> Self {
         Self::new(ErrorKind::InvalidUtf16, pos)
     }
 
+    /// Constructs a new error representing a value that is not a valid Unicode code point.
     pub const fn invalid_code_point(pos: I) -> Self {
         Self::new(ErrorKind::InvalidCodePoint, pos)
     }
 
+    /// Returns the [`ErrorKind`] describing why parsing failed.
     pub const fn kind(&self) -> ErrorKind {
         self.kind
     }
