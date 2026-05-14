@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(*span.end(), "ld");
         assert!(!span.is_empty());
 
-        let spanned: &str = span.clone().into();
+        let spanned: &str = span.into();
         assert_eq!(spanned, "lo wor");
 
         assert_eq!(Input::next(&mut span), Some('l'));
