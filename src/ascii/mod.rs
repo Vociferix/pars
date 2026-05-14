@@ -1,5 +1,21 @@
 // TODO: Switch to `core::ascii::Char` if it ever gets stablized
 
+//! Parsers and utilities for working with ASCII text.
+//!
+//! This module provides parsers for ASCII character streams, including utilities
+//! for character classification and pattern matching. Parsers are divided into
+//! two submodules: [`strict`] rejects non-ASCII input with
+//! [`ErrorKind::NonAsciiChar`], while [`lossy`] replaces non-ASCII input with
+//! the substitute character [`AsciiChar::SUB`] (`0x1A`).
+//!
+//! The [`ascii!`] macro constructs [`AsciiChar`] and [`AsciiStr`] values from
+//! literals at compile time. The [`prop`] module provides character properties
+//! for use with [`strict::char_with_prop`] and [`lossy::char_with_prop`].
+//!
+//! Use this module when working with input that is known or required to be
+//! ASCII. For general Unicode text, use the [`unicode`](crate::unicode) module
+//! instead. For raw binary data, use the [`bytes`](crate::bytes) module.
+
 use crate::{Error as PError, Failure, Input, Success};
 use ascii::ToAsciiChar;
 

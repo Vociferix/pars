@@ -17,14 +17,23 @@ use core::marker::PhantomData;
 
 /// Generates a parser that matches a regular expression over [`AsciiInput`].
 ///
-/// Behaves like [`bytes::regex`](crate::bytes::regex), but the generated parser works over
-/// any [`AsciiInput`]. The regex is matched against the ASCII character
-/// stream. If non-ASCII input is encountered, the parser fails with
-/// [`ErrorKind::NonAsciiChar`](super::ErrorKind::NonAsciiChar), consistent with the rest of
-/// this module.
+/// [`regex!`] compiles a regular expression at compile time into a finite state
+/// machine implemented as a parser over any [`AsciiInput`]. The generated parser
+/// succeeds if the start of the provided input matches the regex. The parsed value
+/// is `()`. To capture the input that matched the regex, use the
+/// [`recognize`](crate::ParseExt::recognize) combinator, e.g.
+/// `regex!(r"\d+").recognize()`.
 ///
-/// The parsed value is `()`. Use [`recognize`](crate::ParseExt::recognize) to capture the
-/// matched input span.
+/// Behind the scenes, this macro uses the
+/// [`regex`](https://docs.rs/regex/latest/regex) crate to compile regular
+/// expressions into state machines. See that crate's documentation for full syntax
+/// and limitations. Notably, some features such as lookarounds and backreferences
+/// are not supported. Capture groups are accepted, but have no effect on the
+/// behavior of the generated parser other than for grouping sub-expressions.
+///
+/// The regex operates on ASCII characters. If non-ASCII input is encountered,
+/// the parser fails with [`ErrorKind::NonAsciiChar`](super::ErrorKind::NonAsciiChar),
+/// consistent with the rest of this module.
 ///
 /// # Example
 /// ```

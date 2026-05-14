@@ -17,14 +17,25 @@ use core::marker::PhantomData;
 
 /// Generates a parser that matches a regular expression over [`AsciiInput`].
 ///
-/// Behaves like [`ascii::strict::regex`](super::strict::regex), but non-ASCII input is
-/// treated as [`AsciiChar::SUB`] (the ASCII substitute character,
-/// `0x1A`) rather than causing a parse failure. The regex is then matched against the
-/// resulting character stream, which may include substitute characters where non-ASCII
-/// input appeared.
+/// [`regex!`] compiles a regular expression at compile time into a finite state
+/// machine implemented as a parser over any [`AsciiInput`]. The generated parser
+/// succeeds if the start of the provided input matches the regex. The parsed value
+/// is `()`. To capture the input that matched the regex, use the
+/// [`recognize`](crate::ParseExt::recognize) combinator, e.g.
+/// `regex!(r"\d+").recognize()`.
 ///
-/// The parsed value is `()`. Use [`recognize`](crate::ParseExt::recognize) to capture the
-/// matched input span.
+/// Behind the scenes, this macro uses the
+/// [`regex`](https://docs.rs/regex/latest/regex) crate to compile regular
+/// expressions into state machines. See that crate's documentation for full syntax
+/// and limitations. Notably, some features such as lookarounds and backreferences
+/// are not supported. Capture groups are accepted, but have no effect on the
+/// behavior of the generated parser other than for grouping sub-expressions.
+///
+/// Behaves like [`strict::regex`](super::strict::regex), but non-ASCII input is
+/// treated as [`AsciiChar::SUB`] (the ASCII substitute character, `0x1A`) rather
+/// than causing a parse failure. The regex is then matched against the resulting
+/// character stream, which may include substitute characters where non-ASCII
+/// input appeared.
 ///
 /// # Example
 /// ```

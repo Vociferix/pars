@@ -1,3 +1,20 @@
+//! Parsers and utilities for working with Unicode text.
+//!
+//! This module provides parsers for Unicode character streams, including
+//! grapheme cluster segmentation, Unicode-aware line breaking, and character
+//! property matching. Parsers are divided into two submodules: [`strict`] fails
+//! on invalid Unicode encodings, while [`lossy`] replaces them with the Unicode
+//! Replacement Character `U+FFFD`.
+//!
+//! The [`prop`] module provides Unicode character properties sourced from ICU
+//! data tables, for use with [`strict::char_with_prop`] and
+//! [`lossy::char_with_prop`]. The [`LocInput`] type wraps any [`UnicodeInput`]
+//! to track line and column positions for use in diagnostic messages.
+//!
+//! Use this module when working with general Unicode text. For ASCII-only input,
+//! the [`ascii`](crate::ascii) module may be more appropriate. For raw binary
+//! data, use the [`bytes`](crate::bytes) module.
+
 use crate::{Error as PError, Failure, Input, Success};
 
 pub mod lossy;

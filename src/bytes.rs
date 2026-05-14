@@ -17,7 +17,7 @@ use core::marker::PhantomData;
 /// machine implemented as a parser over any [`ByteInput`]. The generated
 /// parser succeeds if the start of the provided input matches the regex. The parsed
 /// value of the parser is just the empty tuple, `()`. To capture the input that
-/// matched the regex, use the [`regcognize`](ParseExt::recognize) combinator, e.g.
+/// matched the regex, use the [`recognize`](ParseExt::recognize) combinator, e.g.
 /// `regex!("[a-z]+").recognize()`.
 ///
 /// Behind the scenes, this macro uses the

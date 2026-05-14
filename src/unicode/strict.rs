@@ -17,17 +17,24 @@ use ::core::marker::PhantomData;
 
 /// Generates a parser that matches a regular expression over [`UnicodeInput`].
 ///
-/// Behaves like [`bytes::regex`](crate::bytes::regex), but the generated parser works over
-/// any [`UnicodeInput`]. The regex is matched against the Unicode
-/// character stream. If the input encoding is invalid, the parser fails, consistent with
-/// the rest of this module.
+/// [`regex!`] compiles a regular expression at compile time into a finite state
+/// machine implemented as a parser over any [`UnicodeInput`]. The generated parser
+/// succeeds if the start of the provided input matches the regex. The parsed value
+/// is `()`. To capture the input that matched the regex, use the
+/// [`recognize`](crate::ParseExt::recognize) combinator, e.g.
+/// `regex!(r"\p{Alphabetic}+").recognize()`.
 ///
-/// Full Unicode character classes and properties are supported, e.g. `\p{Letter}`,
-/// `\p{Alphabetic}`, `\p{Script=Latin}`. The regex operates on Unicode code points, not
-/// bytes.
+/// Behind the scenes, this macro uses the
+/// [`regex`](https://docs.rs/regex/latest/regex) crate to compile regular
+/// expressions into state machines. See that crate's documentation for full syntax
+/// and limitations. Notably, some features such as lookarounds and backreferences
+/// are not supported. Capture groups are accepted, but have no effect on the
+/// behavior of the generated parser other than for grouping sub-expressions.
 ///
-/// The parsed value is `()`. Use [`recognize`](crate::ParseExt::recognize) to capture the
-/// matched input span.
+/// The regex operates on Unicode code points rather than bytes. Full Unicode
+/// character classes and properties are supported, e.g. `\p{Letter}`,
+/// `\p{Alphabetic}`, `\p{Script=Latin}`. If the input encoding is invalid, the
+/// parser fails, consistent with the rest of this module.
 ///
 /// # Example
 /// ```

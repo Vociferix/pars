@@ -1,4 +1,35 @@
-//! Unicode property definitions and combinators.
+//! Unicode character property definitions and combinators.
+//!
+//! This module provides two categories of built-in [`Property`] types sourced from
+//! ICU data tables:
+//!
+//! - **Binary properties** — boolean flags such as [`Alphabetic`], [`Lowercase`],
+//!   [`WhiteSpace`], and [`Emoji`]. Each is a unit struct that matches characters
+//!   for which the property is `true`.
+//! - **Enumerated properties** — multi-valued classifications such as [`GeneralCategory`],
+//!   [`Script`], [`GraphemeClusterBreak`], and [`LineBreak`]. Each variant matches
+//!   characters whose property value equals that variant.
+//!
+//! All property types implement [`Not`], [`core::ops::BitAnd`], and [`core::ops::BitOr`]
+//! via operator overloading, so properties can be combined with the `!`, `&`, and `|`
+//! operators. The [`not`], [`and`], and [`or`] functions are also available for use in
+//! `const` contexts. For three or more properties, use the [`all!`] and [`any!`] macros.
+//!
+//! # Example
+//! ```
+//! use pars::unicode::{prop::{Alphabetic, Lowercase, Emoji}, strict::char_with_prop};
+//! use pars::prelude::*;
+//! use pars::unicode::PResult;
+//!
+//! fn lowercase_letter_or_emoji(input: &str) -> PResult<char, &str> {
+//!     char_with_prop((Alphabetic & Lowercase) | Emoji).parse(input)
+//! }
+//!
+//! assert!(lowercase_letter_or_emoji.parse("a").is_ok());
+//! assert!(lowercase_letter_or_emoji.parse("😀").is_ok());
+//! assert!(lowercase_letter_or_emoji.parse("A").is_err()); // uppercase
+//! assert!(lowercase_letter_or_emoji.parse("+").is_err()); // not a letter or emoji
+//! ```
 
 use super::Property;
 #[allow(unused_imports)]
@@ -297,60 +328,222 @@ macro_rules! def_bool_prop {
     };
 }
 
-def_bool_prop!(Alphabetic => icup::Alphabetic);
-def_bool_prop!(AsciiHexDigit => icup::AsciiHexDigit);
-def_bool_prop!(BidiControl => icup::BidiControl);
-def_bool_prop!(BidiMirrored => icup::BidiMirrored);
-def_bool_prop!(CaseIgnorable => icup::CaseIgnorable);
-def_bool_prop!(Cased => icup::Cased);
-def_bool_prop!(ChangesWhenCasefolded => icup::ChangesWhenCasefolded);
-def_bool_prop!(ChangesWhenCasemapped => icup::ChangesWhenCasemapped);
-def_bool_prop!(ChangesWhenLowercased => icup::ChangesWhenLowercased);
-def_bool_prop!(ChangesWhenNfkcCasefolded => icup::ChangesWhenNfkcCasefolded);
-def_bool_prop!(ChangesWhenTitlecased => icup::ChangesWhenTitlecased);
-def_bool_prop!(ChangesWhenUppercased => icup::ChangesWhenUppercased);
-def_bool_prop!(Dash => icup::Dash);
-def_bool_prop!(DefaultIgnorableCodePoint => icup::DefaultIgnorableCodePoint);
-def_bool_prop!(Deprecated => icup::Deprecated);
-def_bool_prop!(Diacritic => icup::Diacritic);
-def_bool_prop!(Emoji => icup::Emoji);
-def_bool_prop!(EmojiComponent => icup::EmojiComponent);
-def_bool_prop!(EmojiModifier => icup::EmojiModifier);
-def_bool_prop!(EmojiModifierBase => icup::EmojiModifierBase);
-def_bool_prop!(EmojiPresentation => icup::EmojiPresentation);
-def_bool_prop!(ExtendedPictographic => icup::ExtendedPictographic);
-def_bool_prop!(Extender => icup::Extender);
-def_bool_prop!(FullCompositionExclusion => icup::FullCompositionExclusion);
-def_bool_prop!(GraphemeBase => icup::GraphemeBase);
-def_bool_prop!(GraphemeExtend => icup::GraphemeExtend);
-def_bool_prop!(GraphemeLink => icup::GraphemeLink);
-def_bool_prop!(HexDigit => icup::HexDigit);
-def_bool_prop!(Hyphen => icup::Hyphen);
-def_bool_prop!(IdContinue => icup::IdContinue);
-def_bool_prop!(IdStart => icup::IdStart);
-def_bool_prop!(Ideographic => icup::Ideographic);
-def_bool_prop!(IdsBinaryOperator => icup::IdsBinaryOperator);
-def_bool_prop!(IdsTrinaryOperator => icup::IdsTrinaryOperator);
-def_bool_prop!(JoinControl => icup::JoinControl);
-def_bool_prop!(LogicalOrderException => icup::LogicalOrderException);
-def_bool_prop!(Lowercase => icup::Lowercase);
-def_bool_prop!(Math => icup::Math);
-def_bool_prop!(NoncharacterCodePoint => icup::NoncharacterCodePoint);
-def_bool_prop!(PatternSyntax => icup::PatternSyntax);
-def_bool_prop!(PatternWhiteSpace => icup::PatternWhiteSpace);
-def_bool_prop!(PrependedConcatenationMark => icup::PrependedConcatenationMark);
-def_bool_prop!(QuotationMark => icup::QuotationMark);
-def_bool_prop!(Radical => icup::Radical);
-def_bool_prop!(RegionalIndicator => icup::RegionalIndicator);
-def_bool_prop!(SentenceTerminal => icup::SentenceTerminal);
-def_bool_prop!(SoftDotted => icup::SoftDotted);
-def_bool_prop!(TerminalPunctuation => icup::TerminalPunctuation);
-def_bool_prop!(UnifiedIdeograph => icup::UnifiedIdeograph);
-def_bool_prop!(Uppercase => icup::Uppercase);
-def_bool_prop!(VariationSelector => icup::VariationSelector);
-def_bool_prop!(WhiteSpace => icup::WhiteSpace);
-def_bool_prop!(XidContinue => icup::XidContinue);
-def_bool_prop!(XidStart => icup::XidStart);
+def_bool_prop!(
+    /// Characters that are alphabetic. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Alphabetic => icup::Alphabetic
+);
+def_bool_prop!(
+    /// ASCII characters used as hexadecimal digits: `0`–`9`, `A`–`F`, `a`–`f`. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    AsciiHexDigit => icup::AsciiHexDigit
+);
+def_bool_prop!(
+    /// Format characters that influence the Unicode bidirectional algorithm. See [UAX #9](https://www.unicode.org/reports/tr9/).
+    BidiControl => icup::BidiControl
+);
+def_bool_prop!(
+    /// Characters whose glyph is mirrored in right-to-left text. See [UAX #9](https://www.unicode.org/reports/tr9/).
+    BidiMirrored => icup::BidiMirrored
+);
+def_bool_prop!(
+    /// Characters that may be ignored for casing purposes. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    CaseIgnorable => icup::CaseIgnorable
+);
+def_bool_prop!(
+    /// Characters that are uppercase, lowercase, or titlecase. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Cased => icup::Cased
+);
+def_bool_prop!(
+    /// Characters whose case-folded form differs from the original. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    ChangesWhenCasefolded => icup::ChangesWhenCasefolded
+);
+def_bool_prop!(
+    /// Characters whose case-mapped form (upper, lower, or title) differs from the original. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    ChangesWhenCasemapped => icup::ChangesWhenCasemapped
+);
+def_bool_prop!(
+    /// Characters whose lowercase form differs from the original. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    ChangesWhenLowercased => icup::ChangesWhenLowercased
+);
+def_bool_prop!(
+    /// Characters whose NFKC case-folded form differs from the original. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    ChangesWhenNfkcCasefolded => icup::ChangesWhenNfkcCasefolded
+);
+def_bool_prop!(
+    /// Characters whose titlecase form differs from the original. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    ChangesWhenTitlecased => icup::ChangesWhenTitlecased
+);
+def_bool_prop!(
+    /// Characters whose uppercase form differs from the original. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    ChangesWhenUppercased => icup::ChangesWhenUppercased
+);
+def_bool_prop!(
+    /// Dashes and hyphen-like characters. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Dash => icup::Dash
+);
+def_bool_prop!(
+    /// Characters that are invisible by default in rendering. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    DefaultIgnorableCodePoint => icup::DefaultIgnorableCodePoint
+);
+def_bool_prop!(
+    /// Deprecated characters whose use is strongly discouraged. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Deprecated => icup::Deprecated
+);
+def_bool_prop!(
+    /// Characters that linguistically modify the meaning of adjacent characters. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Diacritic => icup::Diacritic
+);
+def_bool_prop!(
+    /// Emoji characters. See [UTS #51](https://www.unicode.org/reports/tr51/).
+    Emoji => icup::Emoji
+);
+def_bool_prop!(
+    /// Characters that may appear as components of emoji sequences. See [UTS #51](https://www.unicode.org/reports/tr51/).
+    EmojiComponent => icup::EmojiComponent
+);
+def_bool_prop!(
+    /// Emoji modifier characters such as skin tone selectors. See [UTS #51](https://www.unicode.org/reports/tr51/).
+    EmojiModifier => icup::EmojiModifier
+);
+def_bool_prop!(
+    /// Characters whose appearance can be modified by an emoji modifier. See [UTS #51](https://www.unicode.org/reports/tr51/).
+    EmojiModifierBase => icup::EmojiModifierBase
+);
+def_bool_prop!(
+    /// Characters that are displayed as emoji by default. See [UTS #51](https://www.unicode.org/reports/tr51/).
+    EmojiPresentation => icup::EmojiPresentation
+);
+def_bool_prop!(
+    /// Characters with extended pictographic properties, used in emoji ZWJ sequences. See [UTS #51](https://www.unicode.org/reports/tr51/).
+    ExtendedPictographic => icup::ExtendedPictographic
+);
+def_bool_prop!(
+    /// Characters that extend the value or shape of a preceding character. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Extender => icup::Extender
+);
+def_bool_prop!(
+    /// Characters excluded from canonical composition in Unicode normalization. See [UAX #15](https://www.unicode.org/reports/tr15/).
+    FullCompositionExclusion => icup::FullCompositionExclusion
+);
+def_bool_prop!(
+    /// Characters that serve as a base for grapheme clusters. See [UAX #29](https://www.unicode.org/reports/tr29/).
+    GraphemeBase => icup::GraphemeBase
+);
+def_bool_prop!(
+    /// Non-spacing combining characters that extend a grapheme base. See [UAX #29](https://www.unicode.org/reports/tr29/).
+    GraphemeExtend => icup::GraphemeExtend
+);
+def_bool_prop!(
+    /// Deprecated; formerly used to indicate grapheme linking behavior. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    GraphemeLink => icup::GraphemeLink
+);
+def_bool_prop!(
+    /// Characters used as hexadecimal digits, including fullwidth variants. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    HexDigit => icup::HexDigit
+);
+def_bool_prop!(
+    /// Deprecated; characters used as hyphens. Prefer [`Dash`]. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Hyphen => icup::Hyphen
+);
+def_bool_prop!(
+    /// Characters that can appear after the start of a Unicode identifier. See [UAX #31](https://www.unicode.org/reports/tr31/).
+    IdContinue => icup::IdContinue
+);
+def_bool_prop!(
+    /// Characters that can begin a Unicode identifier. See [UAX #31](https://www.unicode.org/reports/tr31/).
+    IdStart => icup::IdStart
+);
+def_bool_prop!(
+    /// CJK ideograph characters. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Ideographic => icup::Ideographic
+);
+def_bool_prop!(
+    /// Ideographic description characters that combine two ideographic components. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    IdsBinaryOperator => icup::IdsBinaryOperator
+);
+def_bool_prop!(
+    /// Ideographic description characters that combine three ideographic components. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    IdsTrinaryOperator => icup::IdsTrinaryOperator
+);
+def_bool_prop!(
+    /// Format characters controlling joining and cursive connection of adjacent characters. See [UAX #9](https://www.unicode.org/reports/tr9/).
+    JoinControl => icup::JoinControl
+);
+def_bool_prop!(
+    /// Characters whose rendered order differs from their logical order. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    LogicalOrderException => icup::LogicalOrderException
+);
+def_bool_prop!(
+    /// Characters that are lowercase. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Lowercase => icup::Lowercase
+);
+def_bool_prop!(
+    /// Characters with a primary mathematical use. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Math => icup::Math
+);
+def_bool_prop!(
+    /// Code points permanently reserved for internal use and that should never be assigned characters. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    NoncharacterCodePoint => icup::NoncharacterCodePoint
+);
+def_bool_prop!(
+    /// Characters used as syntax in programming-language or structured-data patterns. See [UAX #31](https://www.unicode.org/reports/tr31/).
+    PatternSyntax => icup::PatternSyntax
+);
+def_bool_prop!(
+    /// Whitespace characters used in programming-language or structured-data patterns. See [UAX #31](https://www.unicode.org/reports/tr31/).
+    PatternWhiteSpace => icup::PatternWhiteSpace
+);
+def_bool_prop!(
+    /// Characters that are prepended to the following character in certain concatenation contexts. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    PrependedConcatenationMark => icup::PrependedConcatenationMark
+);
+def_bool_prop!(
+    /// Opening and closing quotation mark characters. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    QuotationMark => icup::QuotationMark
+);
+def_bool_prop!(
+    /// CJK radical characters used in ideographic descriptions. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Radical => icup::Radical
+);
+def_bool_prop!(
+    /// Regional indicator letters, used in pairs to form flag emoji. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    RegionalIndicator => icup::RegionalIndicator
+);
+def_bool_prop!(
+    /// Characters that can end a sentence. See [UAX #29](https://www.unicode.org/reports/tr29/).
+    SentenceTerminal => icup::SentenceTerminal
+);
+def_bool_prop!(
+    /// Characters with a soft-dotted form, such as `i` and `j`. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    SoftDotted => icup::SoftDotted
+);
+def_bool_prop!(
+    /// Characters that generally terminate a statement or utterance. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    TerminalPunctuation => icup::TerminalPunctuation
+);
+def_bool_prop!(
+    /// CJK unified ideographs included in the Unicode Standard. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    UnifiedIdeograph => icup::UnifiedIdeograph
+);
+def_bool_prop!(
+    /// Characters that are uppercase. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    Uppercase => icup::Uppercase
+);
+def_bool_prop!(
+    /// Characters used to select a specific glyph variant. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    VariationSelector => icup::VariationSelector
+);
+def_bool_prop!(
+    /// Whitespace characters. See [UAX #44](https://www.unicode.org/reports/tr44/).
+    WhiteSpace => icup::WhiteSpace
+);
+def_bool_prop!(
+    /// Characters that can continue a stable Unicode identifier (NFKC-stable [`IdContinue`]). See [UAX #31](https://www.unicode.org/reports/tr31/).
+    XidContinue => icup::XidContinue
+);
+def_bool_prop!(
+    /// Characters that can begin a stable Unicode identifier (NFKC-stable [`IdStart`]). See [UAX #31](https://www.unicode.org/reports/tr31/).
+    XidStart => icup::XidStart
+);
 
 macro_rules! def_enum_prop {
     ($(#[$($attr:tt)*])* enum $name:ident { $($(#[$($vattr:tt)*])* $var:ident => $val:ident),* $(,)* } => $prop:ty , default = $dvar:ident) => {
@@ -409,6 +602,7 @@ macro_rules! def_enum_prop {
 }
 
 def_enum_prop! {
+    /// Bidirectional character type, used in the Unicode bidirectional algorithm. See [UAX #9](https://www.unicode.org/reports/tr9/).
     enum BidiClass {
         LeftToRight => LeftToRight,
         RightToLeft => RightToLeft,
@@ -438,6 +632,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// Canonical combining class, used in the canonical ordering of combining mark sequences. See [UAX #15](https://www.unicode.org/reports/tr15/).
     enum CanonicalCombiningClass {
         NotReordered => NotReordered,
         Overlay => Overlay,
@@ -501,6 +696,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// East Asian width, used for estimating display width in fixed-width contexts. See [UAX #11](https://www.unicode.org/reports/tr11/).
     enum EastAsianWidth {
         Neutral => Neutral,
         Ambiguous => Ambiguous,
@@ -513,6 +709,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// The primary classification of every Unicode code point. See [UAX #44](https://www.unicode.org/reports/tr44/).
     enum GeneralCategory {
         Unassigned => Unassigned,
         UppercaseLetter => UppercaseLetter,
@@ -669,6 +866,7 @@ impl GeneralCategory {
 }
 
 def_enum_prop! {
+    /// Grapheme cluster break property, used to determine extended grapheme cluster boundaries. See [UAX #29](https://www.unicode.org/reports/tr29/).
     enum GraphemeClusterBreak {
         Other => Other,
         Control => Control,
@@ -693,6 +891,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// Hangul syllable type, used in Hangul syllable composition and decomposition. See [UAX #44](https://www.unicode.org/reports/tr44/).
     enum HangulSyllableType {
         NotApplicable => NotApplicable,
         VowelJamo => VowelJamo,
@@ -704,6 +903,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// The role of a character in an Indic syllable. See [UAX #44](https://www.unicode.org/reports/tr44/).
     enum IndicSyllabicCategory {
         Other => Other,
         Avagraha => Avagraha,
@@ -746,6 +946,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// Joining behavior of Arabic and Syriac characters in cursive scripts. See [UAX #9](https://www.unicode.org/reports/tr9/).
     enum JoiningType {
         NonJoining => NonJoining,
         JoinCausing => JoinCausing,
@@ -758,6 +959,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// Line break class, used in the Unicode line breaking algorithm. See [UAX #14](https://www.unicode.org/reports/tr14/).
     enum LineBreak {
         Unknown => Unknown,
         Ambiguous => Ambiguous,
@@ -811,6 +1013,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// The script to which a character belongs. See [UAX #24](https://www.unicode.org/reports/tr24/).
     enum Script {
         Adlam => Adlam,
         Ahom => Ahom,
@@ -981,6 +1184,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// Sentence break property, used to determine sentence boundaries. See [UAX #29](https://www.unicode.org/reports/tr29/).
     enum SentenceBreak {
         Other => Other,
         ATerm => ATerm,
@@ -1002,6 +1206,7 @@ def_enum_prop! {
 }
 
 def_enum_prop! {
+    /// Word break property, used to determine word boundaries. See [UAX #29](https://www.unicode.org/reports/tr29/).
     enum WordBreak {
         Other => Other,
         ALetter => ALetter,
