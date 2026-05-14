@@ -1,6 +1,7 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #![cfg_attr(feature = "nightly", feature(const_trait_impl))]
+#![warn(missing_docs)]
 
 //! # Parser-combinator library for Rust.
 //! `pars` is a general purpose parser-combinator library, with support for `no_std`.
@@ -2242,6 +2243,7 @@ where
 }
 
 impl<T, I: Input> Success<T, I> {
+    /// Applies `map_fn` to the parsed value, leaving the remaining input unchanged.
     pub fn map<F, R>(self, map_fn: F) -> Success<R, I>
     where
         F: FnOnce(T) -> R,

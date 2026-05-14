@@ -548,6 +548,7 @@ def_bool_prop!(
 macro_rules! def_enum_prop {
     ($(#[$($attr:tt)*])* enum $name:ident { $($(#[$($vattr:tt)*])* $var:ident => $val:ident),* $(,)* } => $prop:ty , default = $dvar:ident) => {
         $(#[$($attr)*])*
+        #[allow(missing_docs)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
         pub enum $name {
             $(
@@ -745,6 +746,7 @@ def_enum_prop! {
     default = Unassigned
 }
 
+#[allow(missing_docs)]
 impl GeneralCategory {
     #[allow(non_upper_case_globals)]
     pub const Cc: Self = Self::Control;
@@ -837,20 +839,25 @@ impl GeneralCategory {
     //       like there is much value in making a type alias, since the
     //       type is mostly an implementation detail.
     #[allow(clippy::type_complexity)]
+    /// All letter categories: [`LowercaseLetter`](Self::LowercaseLetter), [`UppercaseLetter`](Self::UppercaseLetter), [`TitlecaseLetter`](Self::TitlecaseLetter), [`ModifierLetter`](Self::ModifierLetter), and [`OtherLetter`](Self::OtherLetter).
     pub const L: Or<Self, Or<Self, Or<Self, Or<Self, Self>>>> =
         or(Self::Ll, or(Self::Lu, or(Self::Lt, or(Self::Lm, Self::Lo))));
 
+    /// All other/control categories: [`Control`](Self::Control), [`Format`](Self::Format), [`PrivateUse`](Self::PrivateUse), and [`Surrogate`](Self::Surrogate).
     pub const C: Or<Self, Or<Self, Or<Self, Self>>> =
         or(Self::Cc, or(Self::Cf, or(Self::Co, Self::Cs)));
 
+    /// All mark categories: [`SpacingMark`](Self::SpacingMark), [`EnclosingMark`](Self::EnclosingMark), and [`NonspacingMark`](Self::NonspacingMark).
     pub const M: Or<Self, Or<Self, Self>> = or(Self::Mc, or(Self::Me, Self::Mn));
 
+    /// All number categories: [`DecimalNumber`](Self::DecimalNumber), [`LetterNumber`](Self::LetterNumber), and [`OtherNumber`](Self::OtherNumber).
     pub const N: Or<Self, Or<Self, Self>> = or(Self::Nd, or(Self::Nl, Self::No));
 
     // LINT: Clippy doesn't like the complex type here, but I don't feel
     //       like there is much value in making a type alias, since the
     //       type is mostly an implementation detail.
     #[allow(clippy::type_complexity)]
+    /// All punctuation categories: [`ConnectorPunctuation`](Self::ConnectorPunctuation), [`DashPunctuation`](Self::DashPunctuation), [`ClosePunctuation`](Self::ClosePunctuation), [`FinalPunctuation`](Self::FinalPunctuation), [`InitialPunctuation`](Self::InitialPunctuation), [`OtherPunctuation`](Self::OtherPunctuation), and [`OpenPunctuation`](Self::OpenPunctuation).
     pub const P: Or<Self, Or<Self, Or<Self, Or<Self, Or<Self, Or<Self, Self>>>>>> = or(
         Self::Pc,
         or(
@@ -859,9 +866,11 @@ impl GeneralCategory {
         ),
     );
 
+    /// All symbol categories: [`CurrencySymbol`](Self::CurrencySymbol), [`ModifierSymbol`](Self::ModifierSymbol), [`MathSymbol`](Self::MathSymbol), and [`OtherSymbol`](Self::OtherSymbol).
     pub const S: Or<Self, Or<Self, Or<Self, Self>>> =
         or(Self::Sc, or(Self::Sk, or(Self::Sm, Self::So)));
 
+    /// All separator categories: [`LineSeparator`](Self::LineSeparator), [`ParagraphSeparator`](Self::ParagraphSeparator), and [`SpaceSeparator`](Self::SpaceSeparator).
     pub const Z: Or<Self, Or<Self, Self>> = or(Self::Zl, or(Self::Zp, Self::Zs));
 }
 
