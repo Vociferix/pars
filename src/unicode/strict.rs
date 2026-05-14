@@ -15,10 +15,10 @@ use crate::{
 };
 use ::core::marker::PhantomData;
 
-/// Generates a parser that matches a regular expression over [`UnicodeInput`](super::UnicodeInput).
+/// Generates a parser that matches a regular expression over [`UnicodeInput`].
 ///
 /// Behaves like [`bytes::regex`](crate::bytes::regex), but the generated parser works over
-/// any [`UnicodeInput`](super::UnicodeInput). The regex is matched against the Unicode
+/// any [`UnicodeInput`]. The regex is matched against the Unicode
 /// character stream. If the input encoding is invalid, the parser fails, consistent with
 /// the rest of this module.
 ///
@@ -101,7 +101,7 @@ where
 /// checks whether it satisfies `property`. If the character does not satisfy the
 /// property, an [`ErrorKind::InvalidInput`](super::ErrorKind::InvalidInput) error
 /// is returned. If the input encoding is invalid, an error is returned as with
-/// [`char`].
+/// [`fn@char`].
 ///
 /// # Example
 /// ```

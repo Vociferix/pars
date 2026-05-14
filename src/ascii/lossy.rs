@@ -15,10 +15,10 @@ use crate::{
 };
 use core::marker::PhantomData;
 
-/// Generates a parser that matches a regular expression over [`AsciiInput`](super::AsciiInput).
+/// Generates a parser that matches a regular expression over [`AsciiInput`].
 ///
 /// Behaves like [`ascii::strict::regex`](super::strict::regex), but non-ASCII input is
-/// treated as [`AsciiChar::SUB`](super::AsciiChar::SUB) (the ASCII substitute character,
+/// treated as [`AsciiChar::SUB`] (the ASCII substitute character,
 /// `0x1A`) rather than causing a parse failure. The regex is then matched against the
 /// resulting character stream, which may include substitute characters where non-ASCII
 /// input appeared.

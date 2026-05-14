@@ -15,10 +15,10 @@ use crate::{
 };
 use core::marker::PhantomData;
 
-/// Generates a parser that matches a regular expression over [`AsciiInput`](super::AsciiInput).
+/// Generates a parser that matches a regular expression over [`AsciiInput`].
 ///
 /// Behaves like [`bytes::regex`](crate::bytes::regex), but the generated parser works over
-/// any [`AsciiInput`](super::AsciiInput). The regex is matched against the ASCII character
+/// any [`AsciiInput`]. The regex is matched against the ASCII character
 /// stream. If non-ASCII input is encountered, the parser fails with
 /// [`ErrorKind::NonAsciiChar`](super::ErrorKind::NonAsciiChar), consistent with the rest of
 /// this module.
@@ -167,7 +167,7 @@ where
 /// [`AsciiInput::parse_char`] and then checks whether the character satisfies
 /// `property`. If the character does not satisfy the property, an
 /// [`ErrorKind::InvalidInput`](super::ErrorKind::InvalidInput) error is returned.
-/// If the input is non-ASCII, an error is returned as with [`char`].
+/// If the input is non-ASCII, an error is returned as with [`fn@char`].
 ///
 /// # Example
 /// ```

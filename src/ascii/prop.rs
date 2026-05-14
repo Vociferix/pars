@@ -1,6 +1,6 @@
 //! ASCII character property definitions and combinators.
 //!
-//! This module provides a set of built-in [`Property`](super::Property) types for common
+//! This module provides a set of built-in [`Property`] types for common
 //! ASCII character classifications, along with combinator types for composing
 //! properties using logical operators.
 //!
@@ -29,7 +29,7 @@ use ascii::AsciiChar;
 
 /// A property that matches characters NOT matched by the inner property.
 ///
-/// Construct via the `!` operator on any type implementing [`Property`](super::Property).
+/// Construct via the `!` operator on any type implementing [`Property`].
 ///
 /// # Example
 /// ```
@@ -79,7 +79,7 @@ impl<L: Property, R: Property> core::ops::BitOr<R> for Not<L> {
 
 /// A property that matches characters matched by both inner properties.
 ///
-/// Construct via the `&` operator on any two types implementing [`Property`](super::Property).
+/// Construct via the `&` operator on any two types implementing [`Property`].
 ///
 /// # Example
 /// ```
@@ -130,7 +130,7 @@ impl<LL: Property, LR: Property, R: Property> core::ops::BitOr<R> for And<LL, LR
 
 /// A property that matches characters matched by either inner property.
 ///
-/// Construct via the `|` operator on any two types implementing [`Property`](super::Property).
+/// Construct via the `|` operator on any two types implementing [`Property`].
 ///
 /// # Example
 /// ```

@@ -170,8 +170,8 @@ pub trait UnicodeInput: Input {
 /// A predicate over [`char`] values, used to classify Unicode characters.
 ///
 /// Types implementing [`Property`] are used with parsers such as
-/// [`strict::char_with_prop`](strict::char_with_prop) and
-/// [`lossy::char_with_prop`](lossy::char_with_prop) to match characters with
+/// [`strict::char_with_prop`] and
+/// [`lossy::char_with_prop`] to match characters with
 /// specific properties. The [`prop`] module provides a large set of built-in
 /// Unicode property types sourced from the ICU data tables, and properties can
 /// be combined with `!`, `&`, and `|` operators.

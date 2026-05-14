@@ -17,7 +17,7 @@ use crate::{
 };
 use ::core::marker::PhantomData;
 
-/// Generates a parser that matches a regular expression over [`UnicodeInput`](super::UnicodeInput).
+/// Generates a parser that matches a regular expression over [`UnicodeInput`].
 ///
 /// Behaves like [`unicode::strict::regex`](super::strict::regex), but invalid Unicode
 /// encodings are replaced with `U+FFFD` (the Unicode Replacement Character) rather than

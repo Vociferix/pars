@@ -117,8 +117,8 @@ pub trait AsciiInput: Input {
 /// A predicate over [`AsciiChar`] values, used to classify characters.
 ///
 /// Types implementing [`Property`] are used with parsers such as
-/// [`strict::char_with_prop`](strict::char_with_prop) and
-/// [`lossy::char_with_prop`](lossy::char_with_prop) to match characters with
+/// [`strict::char_with_prop`] and
+/// [`lossy::char_with_prop`] to match characters with
 /// specific properties. The [`prop`] module provides a set of built-in property
 /// types, and properties can be combined with `!`, `&`, and `|` operators.
 ///

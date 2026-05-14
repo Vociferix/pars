@@ -84,21 +84,21 @@ macro_rules! unicode_prop_any {
 
 /// A property that matches characters NOT matched by the inner property.
 ///
-/// Construct via the `!` operator on any type implementing [`Property`](super::Property),
+/// Construct via the `!` operator on any type implementing [`Property`],
 /// or via the [`not`] function.
 #[derive(Debug, Clone, Copy)]
 pub struct Not<P: Property>(P);
 
 /// A property that matches characters matched by both inner properties.
 ///
-/// Construct via the `&` operator on any two types implementing [`Property`](super::Property),
+/// Construct via the `&` operator on any two types implementing [`Property`],
 /// or via the [`and`] function.
 #[derive(Debug, Clone, Copy)]
 pub struct And<L: Property, R: Property>(L, R);
 
 /// A property that matches characters matched by either inner property.
 ///
-/// Construct via the `|` operator on any two types implementing [`Property`](super::Property),
+/// Construct via the `|` operator on any two types implementing [`Property`],
 /// or via the [`or`] function.
 #[derive(Debug, Clone, Copy)]
 pub struct Or<L: Property, R: Property>(L, R);
