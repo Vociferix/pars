@@ -15,8 +15,62 @@ use crate::{
 };
 use ::core::marker::PhantomData;
 
+/// Generates a parser that matches a regular expression over [`UnicodeInput`].
+///
+/// [`regex!`] compiles a regular expression at compile time into a finite state
+/// machine implemented as a parser over any [`UnicodeInput`]. The generated parser
+/// succeeds if the start of the provided input matches the regex. The parsed value
+/// is `()`. To capture the input that matched the regex, use the
+/// [`recognize`](crate::ParseExt::recognize) combinator, e.g.
+/// `regex!(r"\p{Alphabetic}+").recognize()`.
+///
+/// Behind the scenes, this macro uses the
+/// [`regex`](https://docs.rs/regex/latest/regex) crate to compile regular
+/// expressions into state machines. See that crate's documentation for full syntax
+/// and limitations. Notably, some features such as lookarounds and backreferences
+/// are not supported. Capture groups are accepted, but have no effect on the
+/// behavior of the generated parser other than for grouping sub-expressions.
+///
+/// The regex operates on Unicode code points rather than bytes. Full Unicode
+/// character classes and properties are supported, e.g. `\p{Letter}`,
+/// `\p{Alphabetic}`, `\p{Script=Latin}`. If the input encoding is invalid, the
+/// parser fails, consistent with the rest of this module.
+///
+/// # Example
+/// ```
+/// use pars::unicode::strict::regex;
+/// use pars::prelude::*;
+/// use pars::unicode::PResult;
+///
+/// fn word(input: &str) -> PResult<&str, &str> {
+///     regex!(r"\p{Alphabetic}+").recognize().ok_into().parse(input)
+/// }
+///
+/// assert_eq!(word.parse("hello world"), Ok(Success("hello", " world")));
+/// assert_eq!(word.parse("café"), Ok(Success("café", "")));
+/// assert!(word.parse("123").is_err());
+/// ```
 pub use pars_macros::regex_unicode_strict as regex;
 
+/// Parser that extracts one Unicode character from the input.
+///
+/// Fails if the input contains an invalid Unicode encoding (e.g. invalid UTF-8,
+/// invalid UTF-16 surrogate pair, or an out-of-range code point). The exact error
+/// kind returned depends on the encoding of the input.
+///
+/// For the equivalent parser that replaces invalid input with `U+FFFD`, see
+/// [`lossy::char`](super::lossy::char).
+///
+/// # Example
+/// ```
+/// use pars::unicode::strict::char;
+/// use pars::prelude::*;
+/// use pars::unicode::PResult;
+///
+/// assert_eq!(char.parse("hello"), Ok(Success('h', "ello")));
+/// assert_eq!(char.parse("😊 world"), Ok(Success('😊', " world")));
+/// assert!(char.parse("").is_err()); // empty input
+/// ```
 pub fn char<I: UnicodeInput>(input: I) -> PResult<::core::primitive::char, I> {
     I::parse_char(input)
 }
@@ -48,6 +102,26 @@ where
     }
 }
 
+/// Creates a parser that matches one Unicode character satisfying a property.
+///
+/// Reads one character from the input using [`UnicodeInput::parse_char`] and
+/// checks whether it satisfies `property`. If the character does not satisfy the
+/// property, an [`ErrorKind::InvalidInput`](super::ErrorKind::InvalidInput) error
+/// is returned. If the input encoding is invalid, an error is returned as with
+/// [`fn@char`].
+///
+/// # Example
+/// ```
+/// use pars::unicode::{prop::Alphabetic, strict::char_with_prop, PResult};
+/// use pars::prelude::*;
+///
+/// fn letter(input: &str) -> PResult<char, &str> {
+///     char_with_prop(Alphabetic).parse(input)
+/// }
+///
+/// assert_eq!(letter.parse("hello"), Ok(Success('h', "ello")));
+/// assert!(letter.parse("123").is_err());
+/// ```
 #[inline]
 pub const fn char_with_prop<P, I>(
     property: P,
@@ -100,6 +174,27 @@ where
     }
 }
 
+/// Creates a parser that exactly matches a Unicode string in the input.
+///
+/// The returned parser succeeds if the input begins with exactly the sequence of
+/// Unicode characters in `pattern`. On success, the matched input span is returned
+/// as the parsed value. Comparison is character-by-character (codepoint equality);
+/// no Unicode normalization is performed. Fails if any character does not match or
+/// if the input encoding is invalid.
+///
+/// # Example
+/// ```
+/// use pars::unicode::strict::verbatim;
+/// use pars::prelude::*;
+/// use pars::unicode::PResult;
+///
+/// fn hello(input: &str) -> PResult<&str, &str> {
+///     verbatim("hello").ok_into().parse(input)
+/// }
+///
+/// assert_eq!(hello.parse("hello world"), Ok(Success("hello", " world")));
+/// assert!(hello.parse("Hello World").is_err()); // case-sensitive
+/// ```
 #[inline]
 pub const fn verbatim<P, I>(pattern: P) -> impl Parse<I, Parsed = Span<I>, Error = Error<I>>
 where
@@ -109,6 +204,36 @@ where
     VerbatimParser(pattern, PhantomData)
 }
 
+/// Parser that reads characters up to and including the next Unicode line terminator.
+///
+/// Reads Unicode characters until one of the following terminators is encountered:
+/// any character with the `LineBreak=MandatoryBreak` property, CRLF (`\r\n`),
+/// characters with `LineBreak=CarriageReturn`, `LineBreak=LineFeed`, or
+/// `LineBreak=NextLine`, or end of input. The returned [`Span`] covers the entire
+/// consumed input including the terminator (if present). When the line ends at end
+/// of input, the terminator is absent and the span covers only the line content.
+///
+/// Fails if the input is completely empty (no characters and no terminator). Fails
+/// on invalid Unicode encoding. An input containing only a line terminator succeeds
+/// and returns a span containing just the terminator.
+///
+/// For lossy behavior that replaces invalid Unicode rather than failing, see
+/// [`lossy::line`](super::lossy::line).
+///
+/// # Example
+/// ```
+/// use pars::unicode::strict::line;
+/// use pars::prelude::*;
+/// use pars::unicode::PResult;
+///
+/// fn first_line(input: &str) -> PResult<&str, &str> {
+///     line.ok_into().parse(input)
+/// }
+///
+/// assert_eq!(first_line.parse("hello\nworld"), Ok(Success("hello\n", "world")));
+/// assert_eq!(first_line.parse("no newline"), Ok(Success("no newline", "")));
+/// assert!(first_line.parse("").is_err());
+/// ```
 pub fn line<I: UnicodeInput>(input: I) -> PResult<Span<I>, I> {
     char.repeated_until(
         alt!(
@@ -284,6 +409,36 @@ fn precore<I: UnicodeInput>(input: I) -> PResult<(), I> {
         .parse(input)
 }
 
+/// Parser that reads one Unicode extended grapheme cluster from the input.
+///
+/// A grapheme cluster is a user-perceived character, which may consist of multiple
+/// Unicode code points. For example, a base character followed by combining marks,
+/// emoji sequences with ZWJ, Hangul syllable sequences, and regional indicator pairs
+/// (flag emoji) are each parsed as a single grapheme cluster.
+///
+/// The returned [`Span`] covers all the code points that form the cluster. The
+/// segmentation algorithm follows Unicode Standard Annex #29 (Unicode Text
+/// Segmentation), including support for extended grapheme cluster rules such as
+/// Hangul, emoji, regional indicators, and Indic conjunct clusters.
+///
+/// Fails if the input is empty or contains an invalid Unicode encoding.
+///
+/// # Example
+/// ```
+/// use pars::unicode::strict::grapheme_cluster;
+/// use pars::prelude::*;
+/// use pars::unicode::PResult;
+///
+/// fn first_cluster(input: &str) -> PResult<&str, &str> {
+///     grapheme_cluster.ok_into().parse(input)
+/// }
+///
+/// // Simple ASCII character
+/// assert_eq!(first_cluster.parse("hello"), Ok(Success("h", "ello")));
+///
+/// // Emoji with skin tone modifier (two code points, one cluster)
+/// assert_eq!(first_cluster.parse("👋🏽 hi"), Ok(Success("👋🏽", " hi")));
+/// ```
 pub fn grapheme_cluster<I: UnicodeInput>(input: I) -> PResult<Span<I>, I> {
     alt!(
         crlf,
